@@ -14,12 +14,19 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 # Configure file?
 #configure_file(TutorialConfig.h.in TutorialConfig.h)
+#set(HEADER_FILES ../src/readers.h)
+
+#add_library(readers readers.cpp ${HEADER_FILES})
+#target_include_directories(readers PRIVATE 
+#                           ../src 
+#                           )
 
 # Add an executable called Solver to the project
-add_executable(2d_solver.x ../src/main.cxx)
+add_executable(2d_solver.x 
+    ../src/main.cpp 
+    ../src/readers.cpp)
 
 # I don't know how to use the target_include_directories to include ${PROJECT_BINARY_DIR}
-#target_include_directories(Solver PUBLIC 
-#                           $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>../include/
-#                           $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>../src/
+#target_include_directories(2d_Solver PRIVATE 
+#                           ../build 
 #                           )
