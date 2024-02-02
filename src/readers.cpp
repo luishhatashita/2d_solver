@@ -21,7 +21,12 @@
  *  int         neta   :
  *      size of eta dimension;
  */
-void readGrid(std::string fpath, std::vector<std::vector<float>>* coords, int* nxi, int* neta) 
+void readGrid(
+        std::string fpath, 
+        std::vector<std::vector<float>>* coords, 
+        int* nxi, 
+        int* neta
+) 
 {
     std::string row;
     std::string item;
@@ -42,4 +47,25 @@ void readGrid(std::string fpath, std::vector<std::vector<float>>* coords, int* n
     *neta = (int)(*coords)[0][1];
     // Can I improve this?
     (*coords).erase((*coords).begin());
+}
+
+void writeGridWithHalos(
+        std::string* wfpath, 
+        std::vector<std::vector<std::vector<float>>>* nodes_whc, 
+        int* nhc, 
+        int* nxi, 
+        int* neta
+) 
+{
+    std::ofstream out;
+    out.open((*wfpath));
+
+    out << (*nxi)+2*(*nhc) << "," << (*neta)+2*(*nhc) << "\n";
+    // dimensions are now gnxi + 2*nhc by gneta + 2*nhc
+    for (int j=0; j<((*neta)+2*(*nhc)); j++) {
+        for (int i=0; i<((*nxi)+2*(*nhc)); i++) {
+            out << (*nodes_whc)[i][j][0] << "," << (*nodes_whc)[i][j][1] << ",0" << "\n";
+        }
+    }
+    out.close();
 }

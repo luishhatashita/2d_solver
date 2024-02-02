@@ -5,11 +5,12 @@
 
 int main() 
 {
-    //std::vector<std::vector<float>> coords;
-    //int nxi, neta;
-    //readGrid("grid.dat", &coords, &nxi, &neta);
+    // Parameters:
+    int nhc = 2;
+    bool writecsv = true;
+    // Grid:
     Grid gcoarse("grid.dat");
-    std::cout << gcoarse.getNodes()[0][0][0] << std::endl;
+    gcoarse.addHaloCells(nhc, writecsv);
     std::cout << "ok" << std::endl;
     return 0;
 }
