@@ -24,7 +24,9 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 # Add an executable called Solver to the project
 add_executable(2d_solver.x 
     ../src/main.cpp 
-    ../src/readers.cpp)
+    ../src/readers.cpp
+    ../src/grid.cpp
+    )
 
 # I don't know how to use the target_include_directories to include ${PROJECT_BINARY_DIR}
 #target_include_directories(2d_Solver PRIVATE 
