@@ -43,7 +43,14 @@ std::vector<std::vector<std::vector<float>>> Grid::getNodes()
     return gnodes;
 }
 
-// Method to add n halo cells around the grid.
+/* Method to add n halo cells around the grid.
+ *
+ * Parameters:
+ * -----------
+ *  int    inhc     : number of halos cells as input;
+ *  bool   writecsv : flag to write grid nodes into list of points in csv file;
+ *  string wfpath   : file name for grid filw with hallo cells.
+ */
 void Grid::addHaloCells(int inhc, bool writecsv, std::string wfpath)
 {
     // Set grid halo cells whilst initializing the padded domain;
@@ -103,7 +110,22 @@ void Grid::addHaloCells(int inhc, bool writecsv, std::string wfpath)
         }
     }
     if (writecsv) {
-        std::cout << "here" << std::endl;
         writeGridWithHalos(&wfpath, &gnodes_whc, &nhc, &gnxi, &gneta);
+    }
+}
+
+// Method to compute cell center based on padded nodes.
+void Grid::computeCellCenters() 
+{
+    gxc_whc = std::vector<std::vector<std::vector<float>>> (
+              gnxi+2*nhc-1, 
+              std::vector<std::vector<float>>(gneta+2*nhc-1, 
+                  std::vector<float>(2))
+              );
+    for (int j=0; j<(gneta+2*nhc-1); j++) {
+        for (int i=0; i<(gnxi+2*nhc-1); i++) {
+            gxc_whc[i][j][0] = 0.5*(gnodes_whc[i][j][0] + gnodes_whc[i+1][j][0]);
+            gxc_whc[i][j][1] = 0.5*(gnodes_whc[i][j][1] + gnodes_whc[i][j+1][1]);
+        }
     }
 }

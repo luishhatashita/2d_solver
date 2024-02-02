@@ -7,7 +7,8 @@ class Grid
     private:
         std::string gfpath;
         std::vector<std::vector<float>> gcoords;
-        std::vector<std::vector<std::vector<float>>> gnodes, gnodes_whc;
+        std::vector<std::vector<std::vector<float>>> 
+            gnodes, gnodes_whc, gxc_whc, ga_whc;
         int gnxi, gneta;
         int nhc;
     public:
@@ -16,4 +17,6 @@ class Grid
         std::vector<int> getCompDim();
         std::vector<std::vector<std::vector<float>>> getNodes();
         void addHaloCells(int inhc, bool writecsv = false, std::string = "grid_whc.dat");
+        void computeCellCenters();
+        //void computeCellAreas();
 };
