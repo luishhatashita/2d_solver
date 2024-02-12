@@ -1,8 +1,13 @@
+#include <iostream>
 #include <fstream>
 #include <sstream>
 #include <vector>
+#include <array>
 #include <string>
 #include "readers.h"
+#include "grid.h"
+
+using namespace std;
 
 /*  Method to read Oefelein specific grid file which is formatted as follows:
  *  - first line as dimension of the computational domain, nxi and neta, res-
@@ -22,49 +27,58 @@
  *      size of eta dimension;
  */
 void readGrid(
-        std::string fpath, 
-        std::vector<std::vector<float>>* coords, 
+        string fpath, 
+        vector<vector<double>>* coords, 
         int* nxi, 
         int* neta
 ) 
 {
-    std::string row;
-    std::string item;
+    string row;
+    string item;
     char separator = ',';
 
-    std::ifstream in(fpath);
+    string fname = fpath + ".dat";
+
+    cout << "--Reading: " << fname << endl;
+    ifstream in(fname);
     while(getline(in,row))
     {
-        std::vector<float> R;
-        std::stringstream ss(row);
-        while (getline(ss, item, separator)) R.push_back(std::stof(item));
+        vector<double> R;
+        stringstream ss(row);
+        while (getline(ss, item, separator)) R.push_back(stof(item));
         // Two of them work;
         (*coords).push_back(R);
         //coords->push_back(R);
     }
     in.close();
+    cout << "--Finished reading: " << fname << endl;
     *nxi  = (int)(*coords)[0][0];
     *neta = (int)(*coords)[0][1];
     // Can I improve this?
     (*coords).erase((*coords).begin());
+    cout << "--Coords and dimensions obtained." << endl;
 }
 
 void writeGridWithHalos(
-        std::string* wfpath, 
-        std::vector<std::vector<std::vector<float>>>* nodes_whc, 
+        string* wfpath, 
+        //double (*nodes_whc)[][gneta][2],
+        //array<array<array<double,2>, gneta>, gnxi>* nodes_whc, 
+        double*** nodes_whc, 
         int* nhc, 
         int* nxi, 
         int* neta
-) 
+)
 {
-    std::ofstream out;
+    ofstream out;
     out.open((*wfpath));
 
     out << (*nxi)+2*(*nhc) << "," << (*neta)+2*(*nhc) << "\n";
     // dimensions are now gnxi + 2*nhc by gneta + 2*nhc
     for (int j=0; j<((*neta)+2*(*nhc)); j++) {
         for (int i=0; i<((*nxi)+2*(*nhc)); i++) {
-            out << (*nodes_whc)[i][j][0] << "," << (*nodes_whc)[i][j][1] << ",0" << "\n";
+            //out << gnodes_whc[i][j][0] << "," << gnodes_whc[i][j][1] << ",0" << "\n";
+            //out << (*nodes_whc)[i][j][0] << "," << (*nodes_whc)[i][j][1] << ",0" << "\n";
+            out << nodes_whc[i][j][0] << "," << nodes_whc[i][j][1] << ",0" << "\n";
         }
     }
     out.close();

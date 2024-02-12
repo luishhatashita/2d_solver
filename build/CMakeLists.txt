@@ -25,6 +25,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 add_executable(2d_solver.x 
     ../src/main.cpp 
     ../src/readers.cpp
+    ../src/allocate.cpp
     ../src/grid.cpp
     )
 

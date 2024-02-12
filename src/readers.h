@@ -2,16 +2,17 @@
 #define READERS
 #include <vector>
 #include <string>
+using namespace std;
 // Method to read .dat file from Oefelein specific grid.
 void readGrid(
-        std::string fpath, 
-        std::vector<std::vector<float>>* coords, 
+        string fpath, 
+        vector<vector<double>>* coords, 
         int* nxi, 
         int* neta
 );
 void writeGridWithHalos(
-        std::string* wfpath, 
-        std::vector<std::vector<std::vector<float>>>* nodes_whc, 
+        string* wfpath, 
+        double*** nodes_whc, 
         int* nhc, 
         int* nxi, 
         int* neta
