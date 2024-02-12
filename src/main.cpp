@@ -17,7 +17,7 @@ int main(int argc, char* argv[0])
     //string fname = argv[2];
     Grid grid(fname);
     grid.addHaloCells(nhc, writecsv);
-    grid.computeCellCenters();
+    grid.computeMetrics();
     cout << "ok" << endl;
     return 0;
 }

@@ -12,17 +12,17 @@ class Grid
         vector<vector<double>> gcoords;
         int gnxi, gneta;
         int nhc;
-        //vector<vector<vector<float>>> 
-        //    gnodes, gnodes_whc, gxc_whc, ga_whc;
-        double ***gnodes, ***gnodes_whc, ***gxc_whc, ***ga_whc;
+        double ***gnodes, ***gnodes_whc, ***gxc_whc, **ga_whc, ***ggcm_whc,
+               **ginvj_whc;
     public:
         // constructor
-        Grid(string cfpath);//, std::vector<std::vector<float>> ccoords, int cnxi, int cneta);
+        Grid(string cfpath);
         array<int, 2> getCompDim();
         double*** getNodes();
-        //vector<vector<vector<double>>> getNodes();
         void addHaloCells(int inhc, bool writecsv = false);
-        void computeCellCenters();
-        //void computeCellAreas();
+        void computeMetrics();
+        double*** getGeneralizedCoordinateMetrics();
+        double** getInverseJacobian();
+        // destructor
         ~Grid();
 };
