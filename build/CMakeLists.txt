@@ -11,6 +11,7 @@ project(2d_Solver VERSION 1.0)
 # and the variable CMAKE_CXX_STANDARD_REQUIRED to True
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g")
 
 # Configure file?
 #configure_file(TutorialConfig.h.in TutorialConfig.h)

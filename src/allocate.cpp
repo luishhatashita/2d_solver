@@ -14,12 +14,18 @@ using namespace std;
  */
 void allocate2D(int nrows, int ncols, double**& arr)
 {
+
     // Allocate memory for the array of pointers (rows)
     double** newarr = new double*[nrows];
+    // Contiguous memory allocation:
+    //newarr[0] = new double[nrows*ncols];
 
     // Allocate memory for each row (columns)
     for (int i = 0; i < nrows; i++) {
+        // Basic allocation
         newarr[i] = new double[ncols];
+        // Contiguous memory allocation;
+        //newarr[i] = &newarr[0][i*ncols];
     }
     
     // Initialize zeros
@@ -46,13 +52,18 @@ void allocate3D(int nrows, int ncols, int ndeps, double***& arr)
 {
     // Allocate memory for the array of arrays of pointers (rows)
     double*** newarr = new double**[nrows];
+    // Contiguous memory allocation:
+    //newarr[0][0] = new double[nrows*ncols*ndeps];
 
     // Allocate memory for the array of pointers (columns)
     for (int i = 0; i < nrows; i++) {
         newarr[i] = new double*[ncols];
         // Allocate memory for the each column (depths)
         for (int j = 0; j < ncols; j++) {
+            // Basic allocation
             newarr[i][j] = new double[ndeps];
+            // Contiguous memory allocation:
+            //newarr[i][j] = &newarr[0][0][i*ncols*ndeps+j*ncols];
         }
     }
 
@@ -127,6 +138,7 @@ void deallocate2D(int nrows, double**& arr)
     }
 
     // Free memory for the array of pointers
+    //delete[] arr[0];
     delete[] arr;
 }
 
@@ -149,6 +161,7 @@ void deallocate3D(int nrows, int ncols, double***& arr)
     }
 
     // Free memory for the array of pointers
+    //delete[] arr[0][0];
     delete[] arr;
 }
 
