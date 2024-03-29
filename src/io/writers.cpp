@@ -87,6 +87,77 @@ void writeBinGridWithHalos(
     out.close();
 }
 
+/*  Method to write arrays with 2 computational dimensions.
+ *
+ * Parameters:
+ * -----------
+ *  string    fname : reference of string literal of file name;
+ *  int       nx    : number of rows;
+ *  int       ny    : number of columns;
+ *  double**& arr   : reference to 2d array;
+ */
+void writeBinary2DArray(
+    std::string fname, 
+    int nx, int ny,
+    double**& arr
+)
+{
+    //std::cout << "writeBinary2DArray" << std::endl;
+    
+    // Open a binary file for writing
+    std::ofstream out(fname, std::ios::binary);
+
+    if (!out.is_open()) {
+        std::cerr << "Error opening file for writing." << std::endl;
+        return;
+    }
+
+    // Write each row of the 2D array to the binary file
+    for (int i=0; i<nx; i++) {
+        out.write(reinterpret_cast<const char*>(arr[i]), ny*sizeof(double));
+    }
+
+    // Close the file
+    out.close();
+}
+
+/*  Method to write arrays with 3 computational dimensions.
+ *
+ * Parameters:
+ * -----------
+ *  string     fname : reference of string literal of file name;
+ *  int        nx    : number of rows;
+ *  int        ny    : number of columns;
+ *  int        ny    : number of "depths";
+ *  double***& arr   : reference to 3d array;
+ */
+void writeBinary3DArray(
+    std::string fname, 
+    int nx, int ny, int nz,
+    double***& arr
+)
+{
+    //std::cout << "writeBinary3DArray" << std::endl;
+    
+    // Open a binary file for writing
+    std::ofstream out(fname, std::ios::binary);
+
+    if (!out.is_open()) {
+        std::cerr << "Error opening file for writing." << std::endl;
+        return;
+    }
+
+    // Write each row of the 2D array to the binary file
+    for (int i=0; i<nx; i++) {
+        for (int j=0; j<ny; j++) {
+            out.write(reinterpret_cast<const char*>(arr[i][j]), nz*sizeof(double));
+        }
+    }
+
+    // Close the file
+    out.close();
+}
+
 /*  Method to print 2D array on console.
  *
  * Parameters:

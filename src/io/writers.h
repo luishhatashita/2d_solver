@@ -17,6 +17,19 @@ void writeBinGridWithHalos(
     int nhc, 
     double***& x_h 
 );
+void writeBinary2DArray(
+    std::string wfpath, 
+    int nx, 
+    int ny,
+    double**& arr 
+);
+void writeBinary3DArray(
+    std::string wfpath, 
+    int nx, 
+    int ny,
+    int nz, 
+    double***& arr 
+);
 void print2Darray(
     double** arr,
     int dim1,

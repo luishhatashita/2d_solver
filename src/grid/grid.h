@@ -16,20 +16,23 @@ class Grid
 {
     private:
         std::string m_file;
+        bool m_write;
         std::vector<std::vector<double>> m_coords;
         int m_nx, m_ny;
         int m_nhc;
-        double ***m_x_woh, ***m_x, ***m_xc, **m_a, ***m_mgc,
-               **m_invj;
+        double ***m_x_woh, ***m_x, ***m_xc, ***m_xu, ***m_xv,
+               **m_a, ***m_mgc, **m_invj,
+               **m_v, ***m_su, ***m_sv;
     public:
         // constructor
         Grid(std::string file, int nhc, bool write = false);
         //std::array<int, 2> getCompDim();
         double*** getNodes();
-        void      addHaloCells(int inhc, bool writecsv = false);
-        void      computeMetrics();
+        void      addHaloCells(int inhc);
+        void      computeGeneralMetrics();
         double*** getGeneralizedCoordinateMetrics();
         double**  getInverseJacobian();
+        void      computeFiniteVolumeMetrics();
         // destructor
         ~Grid();
 };

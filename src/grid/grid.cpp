@@ -42,11 +42,16 @@ Grid::Grid(std::string file, int nhc, bool write)
 
     std::cout << "--2D array of grid nodes arranged." << std::endl;
     
-    std::string wfpath = m_file + ".bin";
-    writeBinGridWithHalos(wfpath, m_nx, m_ny, 0, m_x_woh);
+    m_write = write;
 
-    Grid::addHaloCells(nhc, write);
-    Grid::computeMetrics();
+    if (m_write) {
+        std::string wfpath = m_file + ".bin";
+        writeBinary3DArray(wfpath, m_nx, m_ny, 2, m_x_woh);
+    }
+
+    Grid::addHaloCells(nhc);
+    //Grid::computeGeneralMetrics();
+    Grid::computeFiniteVolumeMetrics();
 }
 
 // Destructor of Grid
@@ -55,9 +60,16 @@ Grid::~Grid()
     deallocate3D(m_nx          , m_ny          , m_x_woh);
     deallocate3D(m_nx+2*m_nhc  , m_ny+2*m_nhc  , m_x    );
     deallocate3D(m_nx+2*m_nhc-1, m_ny+2*m_nhc-1, m_xc   );
-    deallocate2D(m_nx+2*m_nhc-1,                 m_a    );
-    deallocate3D(m_nx+2*m_nhc-1, m_ny+2*m_nhc-1, m_mgc  );
-    deallocate2D(m_nx+2*m_nhc-1,                 m_invj );
+    // Generalized coordinates pointers:
+    //deallocate2D(m_nx+2*m_nhc-1,                 m_a    );
+    //deallocate3D(m_nx+2*m_nhc-1, m_ny+2*m_nhc-1, m_mgc  );
+    //deallocate2D(m_nx+2*m_nhc-1,                 m_invj );
+    // Finite volume pointers:
+    deallocate3D(m_nx+2*m_nhc  , m_ny+2*m_nhc-1, m_xu   );
+    deallocate3D(m_nx+2*m_nhc-1, m_ny+2*m_nhc  , m_xv   );
+    deallocate3D(m_nx+2*m_nhc  , m_ny+2*m_nhc-1, m_su   );
+    deallocate3D(m_nx+2*m_nhc-1, m_ny+2*m_nhc  , m_sv   );
+    deallocate2D(m_nx+2*m_nhc-1,                 m_v    );
 }
 
 // Method to get computational dimension and size.
@@ -102,7 +114,7 @@ double** Grid::getInverseJacobian()
  * -----
  *  - improve reflection and implement extrapolation of halo nodes;
  */
-void Grid::addHaloCells(int nhc, bool write)
+void Grid::addHaloCells(int nhc)
 {
     // Set grid halo cells whilst initializing the padded domain;
     m_nhc = nhc;
@@ -165,31 +177,44 @@ void Grid::addHaloCells(int nhc, bool write)
 
 
     // Write file of grid nodes with halo cells;
-    if (write) {
+    if (m_write) {
         std::string wfpath = m_file + "_whc.dat";
         writeCSVGridWithHalos(wfpath, m_nx, m_ny, m_nhc, m_x);
         wfpath = m_file + "_whc.bin";
-        writeBinGridWithHalos(wfpath, m_nx, m_ny, m_nhc, m_x);
+        writeBinary3DArray(wfpath, m_nx+2*m_nhc, m_ny+2*m_nhc, 2, m_x);
     }
     std::cout << "--2D array of grid nodes with halo cells computed." << std::endl;
 }
 
-/* Driver method to compute all grid metrics:
+/* Driver method to compute all generalized coordinate grid metrics:
  * 1. cell centers;
  * 2. cell areas;
- * 3. projected cell face areas; - TODO
- * 4. grid metrics for generalized coordinates;
+ * 3. grid metrics for generalized coordinates;
+ * 
+ * TODO:
+ * -----
+ *  - invj: i think it is not correct, since 1/J ~ V;
  */
-void Grid::computeMetrics() 
+void Grid::computeGeneralMetrics() 
 {
-    computeCellCenters             (m_nx, m_ny, m_nhc, m_x, m_xc);
-    //print3Darray(gxc_whc, gm_nx+2*m_nhc-1, gm_ny+2*m_nhc-1, 2);
+    computeCellCenters             (m_nx, m_ny, m_nhc, m_x, m_xc, m_file, m_write);
     computeCellAreas               (m_nx, m_ny, m_nhc, m_x, m_a );
-    //print2Darray(ga_whc, gm_nx+2*m_nhc-1, gm_ny+2*m_nhc-1);
     computeGeneralCoordinateMetrics(
         m_nx, m_ny, m_nhc, 
         m_xc, m_mgc, m_invj
     );
-    //print3Darray(gpcm_whc, gm_nx+2*m_nhc-1, gm_ny+2*m_nhc-1, 4);
-    //print3Darray(gpcm_whc, gm_nx+2*m_nhc-1, gm_ny+2*m_nhc-1, 4);
+}
+
+/* Driver method to compute all finite volume grid metrics:
+ * 1. cell centers;
+ * 2. face centroids;
+ * 3. projected cell face areas;
+ * 4. cell "volumes" (areas here);
+ */
+void Grid::computeFiniteVolumeMetrics() 
+{
+    computeCellCenters(m_nx, m_ny, m_nhc, m_x, m_xc, m_file, m_write);
+    computeFaceCenters(m_nx, m_ny, m_nhc, m_x, m_xu, m_xv, m_file, m_write);
+    computeProjectedFaceAreas(m_nx, m_ny, m_nhc, m_x, m_su, m_sv, m_file, m_write);
+    computeCellVolumes(m_nx, m_ny, m_nhc, m_x, m_v, m_file, m_write);
 }
