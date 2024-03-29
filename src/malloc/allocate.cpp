@@ -1,8 +1,6 @@
-#include <iostream>
 #include "allocate.h"
-#include "grid.h"
 
-using namespace std;
+#include <iostream>
 
 /* Method to allocate memory for a 2D array.
  *

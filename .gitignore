@@ -1,0 +1,7 @@
+# folder
+
+src/.cache/
+
+# files
+
+src/compile_commands.json
