@@ -13,7 +13,7 @@ int main(int argc, char* argv[0])
     //int nhc = stoi(argv[1]);
     bool write = true;
     // Grid:
-    std::string fname = "g65x49u";
+    std::string fname = "g33x25u";
     //string fname = argv[2];
     // Ideally add everything implicitly in the constructor.
     Grid grid(fname, nhc, write);

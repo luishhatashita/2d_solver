@@ -17,57 +17,58 @@ matplotlib.rc('text' , **text )
 import matplotlib.pyplot as plt
 
 if __name__ == '__main__':
-    x   = np.fromfile("./g65x49u.bin", dtype=np.double)
-    x   = x.reshape((65,49,2))
-    x_h = np.fromfile("./g65x49u_whc.bin", dtype=np.double)
-    x_h = x_h.reshape((67,51,2))
+    nx, ny, nhc = 33, 25, 1
+    x   = np.fromfile(f"./g{nx}x{ny}u.bin", dtype=np.double)
+    x   = x.reshape((nx,ny,2))
+    x_h = np.fromfile(f"./g{nx}x{ny}u_whc.bin", dtype=np.double)
+    x_h = x_h.reshape((nx+2*nhc,ny+2*nhc,2))
 
     # Original grid nodes:
     fig, ax = plt.subplots(figsize=(8,6))
-    for i in range(65):
+    for i in range(nx):
         ax.plot(x[i,:,0], x[i,:,1], color='k', marker='.', markersize=5)
-    for j in range(49):
+    for j in range(ny):
         ax.plot(x[:,j,0], x[:,j,1], color='k', marker='.', markersize=5)
     ax.set(
         xlabel = r'$x$ [m]',
         ylabel = r'$y$ [m]',
     )
     fig.tight_layout()
-    fig.savefig("./g65x49u.png", dpi=300)
+    fig.savefig(f"./g{nx}x{ny}u.png", dpi=300)
     plt.close(fig)
 
     # Grid nodes with halo cells:
     fig, ax = plt.subplots(figsize=(8,6))
-    for i in range(67):
+    for i in range(nx+2*nhc):
         ax.plot(x_h[i,:,0], x_h[i,:,1], color='r', marker='.', markersize=5)
-    for j in range(51):
+    for j in range(ny+2*nhc):
         ax.plot(x_h[:,j,0], x_h[:,j,1], color='r', marker='.', markersize=5)
-    for i in range(65):
+    for i in range(nx):
         ax.plot(x[i,:,0], x[i,:,1], color='k', marker='.', markersize=5)
-    for j in range(49):
+    for j in range(ny):
         ax.plot(x[:,j,0], x[:,j,1], color='k', marker='.', markersize=5)
     ax.set(
         xlabel = r'$x$ [m]',
         ylabel = r'$y$ [m]',
     )
     fig.tight_layout()
-    fig.savefig("./g65x49u_whc.png", dpi=300)
+    fig.savefig(f"./g{nx}x{ny}u_whc.png", dpi=300)
     plt.close(fig)
 
     # Grid nodes with cell centers and face centroids:
-    xc  = np.fromfile("./g65x49u_xc.bin", dtype=np.double)
-    xc  = xc.reshape((66,50,2))
-    xu  = np.fromfile("./g65x49u_xu.bin", dtype=np.double)
-    xu  = xu.reshape((67,50,2))
-    xv  = np.fromfile("./g65x49u_xv.bin", dtype=np.double)
-    xv  = xv.reshape((66,51,2))
+    xc  = np.fromfile(f"./g{nx}x{ny}u_xc.bin", dtype=np.double)
+    xc  = xc.reshape((nx+2*nhc-1,ny+2*nhc-1,2))
+    xu  = np.fromfile(f"./g{nx}x{ny}u_xu.bin", dtype=np.double)
+    xu  = xu.reshape((nx+2*nhc,  ny+2*nhc-1,2))
+    xv  = np.fromfile(f"./g{nx}x{ny}u_xv.bin", dtype=np.double)
+    xv  = xv.reshape((nx+2*nhc-1,ny+2*nhc,  2))
     fig, ax = plt.subplots(figsize=(12,8))
-    for i in range(67):
+    for i in range(nx+2*nhc):
         ax.plot(x_h[i,:,0], x_h[i,:,1], 
                 color='r',
                 alpha=0.25, linewidth=0.75
         )
-    for j in range(51):
+    for j in range(ny+2*nhc):
         ax.plot(x_h[:,j,0], x_h[:,j,1], 
                 color='r',
                 alpha=0.25, linewidth=0.75
@@ -80,18 +81,18 @@ if __name__ == '__main__':
         ylabel = r'$y$ [m]',
     )
     fig.tight_layout()
-    fig.savefig("./g65x49u_c.png", dpi=300)
+    fig.savefig(f"./g{nx}x{ny}u_c.png", dpi=300)
     plt.close(fig)
 
     # Projected cell face areas and volumes along lines:
-    su  = np.fromfile("./g65x49u_su.bin", dtype=np.double)
-    su  = su.reshape((67,50,2))
+    su  = np.fromfile(f"./g{nx}x{ny}u_su.bin", dtype=np.double)
+    su  = su.reshape((nx+2*nhc,ny+2*nhc-1,2))
     su  = 0.5*(su[1:,:,:]+su[:-1,:,:])
-    sv  = np.fromfile("./g65x49u_sv.bin", dtype=np.double)
-    sv  = sv.reshape((66,51,2))
+    sv  = np.fromfile(f"./g{nx}x{ny}u_sv.bin", dtype=np.double)
+    sv  = sv.reshape((nx+2*nhc-1,ny+2*nhc,2))
     sv  = 0.5*(sv[:,1:,:]+sv[:,:-1,:])
-    v   = np.fromfile("./g65x49u_v.bin", dtype=np.double)
-    v   = v.reshape((66,50))
+    v   = np.fromfile(f"./g{nx}x{ny}u_v.bin", dtype=np.double)
+    v   = v.reshape((nx+2*nhc-1,ny+2*nhc-1))
     fig, axs = plt.subplots(1, 2, figsize=(12,5))
     axs[0].plot(xc[1:-1,1,0], su[1:-1,1,0], linestyle='dashed', color='tab:blue')
     axs[0].plot(xc[1:-1,1,0], su[1:-1,1,1], linestyle='dotted', color='tab:blue')
@@ -102,17 +103,18 @@ if __name__ == '__main__':
         xlabel = r'$x$ [m]',
         ylabel = r'$S_{\xi_x, \xi_y}, S_{\eta_x, \eta_y}, V \; [{\rm m^2, m^3}]$',
     )
-    axs[1].plot(su[30,1:-1,0], xc[30,1:-1,1], linestyle='dashed', color='tab:blue')
-    axs[1].plot(su[30,1:-1,1], xc[30,1:-1,1], linestyle='dotted', color='tab:blue')
-    axs[1].plot(sv[30,1:-1,0], xc[30,1:-1,1], linestyle='dashed', color='tab:orange')
-    axs[1].plot(sv[30,1:-1,1], xc[30,1:-1,1], linestyle='dotted', color='tab:orange')
-    axs[1].plot( v[30,1:-1]  , xc[30,1:-1,1], linestyle='solid',  color='tab:green')
+    ix = int(nx/2)
+    axs[1].plot(su[ix,1:-1,0], xc[ix,1:-1,1], linestyle='dashed', color='tab:blue')
+    axs[1].plot(su[ix,1:-1,1], xc[ix,1:-1,1], linestyle='dotted', color='tab:blue')
+    axs[1].plot(sv[ix,1:-1,0], xc[ix,1:-1,1], linestyle='dashed', color='tab:orange')
+    axs[1].plot(sv[ix,1:-1,1], xc[ix,1:-1,1], linestyle='dotted', color='tab:orange')
+    axs[1].plot( v[ix,1:-1]  , xc[ix,1:-1,1], linestyle='solid',  color='tab:green')
     axs[1].set(
         xlabel = r'$S_{\xi_x, \xi_y}, S_{\eta_x, \eta_y}, V \; [{\rm m^2, m^3}]$',
         ylabel = r'$y$ [m]',
     )
     fig.tight_layout()
-    fig.savefig("./g65x49u_suv_v_lines.png", dpi=300)
+    fig.savefig(f"./g{nx}x{ny}u_suv_v_lines.png", dpi=300)
     plt.close(fig)
 
     fig, axs = plt.subplots(2, 2, figsize=(12,8), sharey='row', sharex='col')
@@ -149,7 +151,7 @@ if __name__ == '__main__':
         #title  = r'$S_{\eta_y}$',
     )
     fig.tight_layout()
-    fig.savefig("./g65x49u_suv_v.png", dpi=300)
+    fig.savefig(f"./g{nx}x{ny}u_suv_v.png", dpi=300)
     plt.close(fig)
 
     fig, ax = plt.subplots(figsize=(8,6))
@@ -162,5 +164,5 @@ if __name__ == '__main__':
         #title  = r'$S_{\eta_y}$',
     )
     fig.tight_layout()
-    fig.savefig("./g65x49u_v.png", dpi=300)
+    fig.savefig(f"./g{nx}x{ny}u_v.png", dpi=300)
     plt.close(fig)
