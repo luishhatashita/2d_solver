@@ -12,12 +12,15 @@ project(2Dsolver VERSION 1.0)
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -Wall")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -Wall -pg")
 
 # Add libraries' subdirectories.
+add_subdirectory(parameters)
 add_subdirectory(grid)
 add_subdirectory(io)
 add_subdirectory(malloc)
+add_subdirectory(schemes)
+add_subdirectory(norms)
 
 # Add main files 
 file(GLOB SOURCE_FILES "${CMAKE_CURRENT_LIST_DIR}/*.cpp" "${CMAKE_CURRENT_LIST_DIR}/*.h")
@@ -26,7 +29,6 @@ add_executable(2Dsolver
     ${SOURCE_FILES} 
 )
 
-target_link_libraries(2Dsolver PUBLIC grid)
-#target_link_libraries(2Dsolver PUBLIC grid io malloc)
+target_link_libraries(2Dsolver PUBLIC parameters grid schemes)
 
 target_include_directories(2Dsolver PUBLIC ${CMAKE_CURRENT_LIST_DIR})

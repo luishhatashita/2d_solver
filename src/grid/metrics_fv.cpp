@@ -40,7 +40,7 @@ void computeCellCenters(
     std::cout << "--2D array of grid cell centers computed." << std::endl;
 
     if (write) {
-        std::string wfpath = fpath + "_xc.bin";
+        std::string wfpath = "./grid/" + fpath + "_xc.bin";
         writeBinary3DArray(wfpath, nx+2*nhc-1, ny+2*nhc-1, 2, xc);
     }
 }
@@ -89,9 +89,9 @@ void computeFaceCenters(
     std::cout << "--2D arrays of grid cell face centroids computed." << std::endl;
 
     if (write) {
-        std::string wfpath = fpath + "_xu.bin";
+        std::string wfpath = "./grid/" + fpath + "_xu.bin";
         writeBinary3DArray(wfpath, nx+2*nhc, ny+2*nhc-1, 2, xu);
-        wfpath = fpath + "_xv.bin";
+        wfpath = "./grid/" + fpath + "_xv.bin";
         writeBinary3DArray(wfpath, nx+2*nhc-1, ny+2*nhc, 2, xv);
     }
 }
@@ -145,9 +145,9 @@ void computeProjectedFaceAreas(
     std::cout << "--2D arrays of grid cell face centroids computed." << std::endl;
 
     if (write) {
-        std::string wfpath = fpath + "_su.bin";
+        std::string wfpath = "./grid/" + fpath + "_su.bin";
         writeBinary3DArray(wfpath, nx+2*nhc, ny+2*nhc-1, 2, su);
-        wfpath = fpath + "_sv.bin";
+        wfpath = "./grid/" + fpath + "_sv.bin";
         writeBinary3DArray(wfpath, nx+2*nhc-1, ny+2*nhc, 2, sv);
     }
 }
@@ -197,7 +197,7 @@ void computeCellVolumes(
     std::cout << "--2D array of grid cell volumes computed." << std::endl;
 
     if (write) {
-        std::string wfpath = fpath + "_v.bin";
+        std::string wfpath = "./grid/" + fpath + "_v.bin";
         writeBinary2DArray(wfpath, nx+2*nhc-1, ny+2*nhc-1, v);
     }
 }

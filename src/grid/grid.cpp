@@ -45,7 +45,7 @@ Grid::Grid(std::string file, int nhc, bool write)
     m_write = write;
 
     if (m_write) {
-        std::string wfpath = m_file + ".bin";
+        std::string wfpath = "./grid/" + m_file + ".bin";
         writeBinary3DArray(wfpath, m_nx, m_ny, 2, m_x_woh);
     }
 
@@ -57,6 +57,8 @@ Grid::Grid(std::string file, int nhc, bool write)
 // Destructor of Grid
 Grid::~Grid() 
 {
+    //std::cout << "Grid destructor" << std::endl;
+
     deallocate3D(m_nx          , m_ny          , m_x_woh);
     deallocate3D(m_nx+2*m_nhc  , m_ny+2*m_nhc  , m_x    );
     deallocate3D(m_nx+2*m_nhc-1, m_ny+2*m_nhc-1, m_xc   );
@@ -82,6 +84,14 @@ Grid::~Grid()
 //    return acompdim;
 //}
 
+// Method to get array sizes.
+void Grid::getArraySizes(int*& dims) const
+{
+    dims[0] = m_nx;
+    dims[1] = m_ny;
+    dims[2] = m_nhc;
+}
+
 // Method to get nodes as 3d vector.
 double*** Grid::getNodes()
 {
@@ -101,6 +111,24 @@ double** Grid::getInverseJacobian()
 {
     // Return array of nodes;
     return m_invj;
+}
+
+// Method to get projected cell face areas of the xi faces.
+double*** Grid::getProjectedFaceAreasXi() const
+{
+    return m_su;
+}
+
+// Method to get projected cell face areas of the eta faces.
+double*** Grid::getProjectedFaceAreasEta() const
+{
+    return m_sv;
+}
+
+// Method to get cell volumes.
+double** Grid::getCellVolumes() const
+{
+    return m_v;
 }
 
 /* Method to add n halo cells around the grid.
@@ -178,9 +206,9 @@ void Grid::addHaloCells(int nhc)
 
     // Write file of grid nodes with halo cells;
     if (m_write) {
-        std::string wfpath = m_file + "_whc.dat";
+        std::string wfpath = "./grid/" + m_file + "_whc.dat";
         writeCSVGridWithHalos(wfpath, m_nx, m_ny, m_nhc, m_x);
-        wfpath = m_file + "_whc.bin";
+        wfpath = "./grid/" + m_file + "_whc.bin";
         writeBinary3DArray(wfpath, m_nx+2*m_nhc, m_ny+2*m_nhc, 2, m_x);
     }
     std::cout << "--2D array of grid nodes with halo cells computed." << std::endl;
