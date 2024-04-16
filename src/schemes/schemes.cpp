@@ -157,40 +157,22 @@ void computeFirstOrderUpwindFluxes(
     double***& FhL, double***& FhR, double***& Fh
 )
 {
-
-    // Already constructing Left and Right states such that the boundaries are
-    // the averages of the adjecent cells;
-    // TODO:
-    // -----
-    //  - can remove some of the loop;
     // Manually upwind:
     // 1. xi fluxes:
-    // a) interior faces:
-    for (int i=nhc+1; i<(nx+nhc-1); i++) {
+    for (int i=nhc; i<(nx+nhc); i++) {
         for (int j=nhc; j<(ny+nhc-1); j++) {
             for (int l=0; l<4; l++) {
-                //Eh[i][j][l] = EhL[i][j][l];
                 Qu[i][j][l] = QuL[i][j][l];
             }
         }
     }
-    // b) boundaries - central:
-    for (int j=nhc; j<(ny+nhc-1); j++) {
-        for (int l=0; l<4; l++) {
-            //Eh[nhc][j][l]      = 0.5*(EhL[nhc][j][l]     +EhR[nhc][j][l]);
-            //Eh[nx+nhc-1][j][l] = 0.5*(EhL[nx+nhc-1][j][l]+EhR[nx+nhc-1][j][l]);
-            Qu[nhc][j][l]      = 0.5*(QuL[nhc][j][l]     +QuR[nhc][j][l]     );
-            Qu[nx+nhc-1][j][l] = 0.5*(QuL[nx+nhc-1][j][l]+QuR[nx+nhc-1][j][l]);
-        }
-    }
     // 2. eta fluxes:
-    // a) interior faces before airfoil: 
     /*
+    // a) interior faces before airfoil: 
     int mid = (nx-1)/2;// + 5;
     for (int i=nhc; i<(mid+nhc); i++) {
-        for (int j=nhc+1; j<(ny+nhc-1); j++) {
+        for (int j=nhc; j<(ny+nhc); j++) {
             for (int l=0; l<4; l++) {
-                //Fh[i][j][l] = FhL[i][j][l];
                 Qv[i][j][l] = QvL[i][j][l];
                 //Qv[i][j][l] = QvR[i][j][l];
             }
@@ -198,9 +180,8 @@ void computeFirstOrderUpwindFluxes(
     }
     // a) interior faces after airfoil:
     for (int i=(mid+nhc); i<(nx+nhc-1); i++) {
-        for (int j=nhc+1; j<(ny+nhc-1); j++) {
+        for (int j=nhc; j<(ny+nhc); j++) {
             for (int l=0; l<4; l++) {
-                //Fh[i][j][l] = FhR[i][j][l];
                 //Qv[i][j][l] = QvL[i][j][l];
                 Qv[i][j][l] = QvR[i][j][l];
             }
@@ -208,36 +189,16 @@ void computeFirstOrderUpwindFluxes(
     }
     */
     ///* upwind from down to upwards
-    //double u, v, S_et, v_et, b_v_et;
     for (int i=nhc; i<(nx+nhc-1); i++) {
-        for (int j=nhc+1; j<(ny+nhc-1); j++) {
+        for (int j=nhc; j<(ny+nhc); j++) {
             for (int l=0; l<4; l++) {
-                //Fh[i][j][l] = FhL[i][j][l];
                 //Qv[i][j][l] = QvL[i][j][l];
                 //Qv[i][j][l] = QvR[i][j][l];
                 Qv[i][j][l] = 0.5*(QvL[i][j][l]+QvR[i][j][l]);
             }
-            //u    = Qv[i][j][1]/Qv[i][j][0];
-            //v    = Qv[i][j][2]/Qv[i][j][0];
-            //S_et = sqrt(Sv[i][j][0]*Sv[i][j][0] + Sv[i][j][1]*Sv[i][j][1]);
-            //v_et = u*Sv[i][j][0]/S_et + v*Sv[i][j][1]/S_et;
-            //b_v_et = (v_et + fabs(v_et))/(2*fabs(v_et));
-            //for (int l=0; l<4; l++) {
-            //    //Qv[i][j][l] = b_v_et*QvL[i][j][l] + (1.0-b_v_et)*QvR[i][j][l];
-            //    //Qv[i][j][l] = b_v_et*QvR[i][j][l] + (1.0-b_v_et)*QvL[i][j][l];
-            //}
         }
     }
     //*/
-    // b) boundaries:
-    for (int i=nhc; i<(nx+nhc-1); i++) {
-        for (int l=0; l<4; l++) {
-            //Fh[i][nhc][l]      = 0.5*(FhL[i][nhc][l]     +FhR[i][nhc][l]);
-            //Fh[i][ny+nhc-1][l] = 0.5*(FhL[i][ny+nhc-1][l]+FhR[i][ny+nhc-1][l]);
-            Qv[i][nhc][l]      = 0.5*(QvL[i][nhc][l]     +QvR[i][nhc][l]     );
-            Qv[i][ny+nhc-1][l] = 0.5*(QvL[i][ny+nhc-1][l]+QvR[i][ny+nhc-1][l]);
-        }
-    }
     
     computeXiFlux (par, nx, ny, nhc, Su, V, Qu, Eh);
     computeEtaFlux(par, nx, ny, nhc, Sv, V, Qv, Fh);

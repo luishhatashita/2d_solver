@@ -20,12 +20,12 @@ enum BoundaryConditions {
 void initializeField(
     const Parameters& par, const Grid& grid,
     int nx, int ny, int nhc,
-    double***& Qn, double***& Qvn
+    double***& Qn, double***& Qvn, double***& Qvnp1
 );
 void computeBoundaryConditions(
     const Parameters& par, const Grid& grid,
     int nx, int ny, int nhc,
-    double***& Qvn
+    double***& Qvn, double***& Qvnp1
 );
 void primitiveToConservative(
     const Parameters& par,

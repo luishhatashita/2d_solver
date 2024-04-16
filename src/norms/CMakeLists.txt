@@ -9,4 +9,4 @@ add_library(norms ${NORMS_FILES})
 
 target_include_directories(norms PUBLIC ${CMAKE_CURRENT_LIST_DIR})
 
-#target_link_libraries(io PUBLIC else)
+target_link_libraries(norms PUBLIC parameters)

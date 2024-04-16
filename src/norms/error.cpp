@@ -2,7 +2,10 @@
 
 #include <cmath>
 
+#include "parameters.h"
+
 void computeL2(
+    const Parameters& par, 
     int nx, int ny, int nhc, 
     double ***&Qn, double ***&Qnp1, 
     double *&L2
@@ -18,9 +21,18 @@ void computeL2(
         }
         L2[l] = sqrt(L2l);
     }
+
+    // Normalize error values:
+    double rho_ref;
+    rho_ref = par.ref.pref/(par.td.R*par.ref.Tref);
+    L2[0] = L2[0]/rho_ref;
+    L2[1] = L2[1]/(rho_ref*par.ref.uref);
+    L2[2] = L2[2]/(rho_ref*par.ref.uref);
+    L2[3] = L2[3]/(rho_ref*par.td.c*par.td.c);
 }
 
 void computeLinfinity(
+    const Parameters& par, 
     int nx, int ny, int nhc, 
     double ***&Qn, double ***&Qnp1, 
     double *&Linfty
@@ -36,4 +48,12 @@ void computeLinfinity(
         }
         Linfty[l] = Linftyl;
     }
+
+    // Normalize error values:
+    double rho_ref;
+    rho_ref = par.ref.pref/(par.td.R*par.ref.Tref);
+    Linfty[0] = Linfty[0]/rho_ref;
+    Linfty[1] = Linfty[1]/(rho_ref*par.ref.uref);
+    Linfty[2] = Linfty[2]/(rho_ref*par.ref.uref);
+    Linfty[3] = Linfty[3]/(rho_ref*par.td.c*par.td.c);
 }

@@ -42,6 +42,7 @@ Solution::Solution(
     // Allocate memory:
     allocate3D(m_nx+2*m_nhc-1, m_ny+2*m_nhc-1, 4, m_Qn);
     allocate3D(m_nx+2*m_nhc-1, m_ny+2*m_nhc-1, 4, m_Qvn);
+    allocate3D(m_nx+2*m_nhc-1, m_ny+2*m_nhc-1, 4, m_Qvnp1);
     
     // Solution start either from file or scratch:
     m_write = write;
@@ -49,7 +50,14 @@ Solution::Solution(
         // read rest file;
     } else {
         // create initial restart;
-        initializeField(par, grid, m_nx, m_ny, m_nhc, m_Qn, m_Qvn);
+        initializeField(par, grid, m_nx, m_ny, m_nhc, m_Qn, m_Qvn, m_Qvnp1);
+        //for (int i=0; i<(m_nx+2*m_nhc-1); i++) {
+        //    for (int j=0; j<(m_ny+2*m_nhc-1); j++) {
+        //        for (int l=0; l<4; l++) {
+        //            m_Qvn[i][j][l] = m_Qvnp1[i][j][l];
+        //        }
+        //    }
+        //}
         if (m_write) {
             writePrimitives(par, grid, 0);
             writeConservatives(grid, 0);
@@ -75,7 +83,6 @@ Solution::Solution(
     // Time step and integration
     allocate2D(m_nx+2*m_nhc-1, m_ny+2*m_nhc-1,    m_dt   );
     allocate3D(m_nx+2*m_nhc-1, m_ny+2*m_nhc-1, 4, m_Qnp1 );
-    allocate3D(m_nx+2*m_nhc-1, m_ny+2*m_nhc-1, 4, m_Qvnp1);
     // Error norms;
     allocate2D(s_nit-1, 4,m_L2);
     allocate2D(s_nit-1, 4,m_Linfty);
@@ -273,7 +280,8 @@ void Solution::computeTimeSteps(
         }
     }
     dt_max = max;
-    std::cout << "dt:      min = " << min << "; max = " << max << std::endl;
+    m_dt_min = min;
+    m_dt_max = max;
     //char buffer[50];
     //sprintf(buffer, "./out/rest/dt%05d.bin", 0);
     //writeBinary2DArray(buffer, m_nx+2*m_nhc-1, m_ny+2*m_nhc-1, m_dt);
@@ -325,7 +333,7 @@ void Solution::checkTimeStep(
             max_CFL = fmax(max_CFL, local_CFL);
         }
     }
-    std::cout << "CFL:     max = " << max_CFL << std::endl;
+    m_CFL_max = max_CFL;
 }
 
 /* Method to integrate over time based on the time-marching approach, thus non-
@@ -367,7 +375,7 @@ void Solution::integrateLocalTime(const Parameters& par, const Grid& grid)
 
     // Update boundary conditions:
     conservativeToPrimitive(par, m_nx, m_ny, m_nhc, V, m_Qnp1, m_Qvnp1);
-    computeBoundaryConditions(par, grid, m_nx, m_ny, m_nhc, m_Qvnp1);
+    computeBoundaryConditions(par, grid, m_nx, m_ny, m_nhc, m_Qvn, m_Qvnp1);
     primitiveToConservative(par, m_nx, m_ny, m_nhc, V, m_Qnp1, m_Qvnp1);
     //sprintf(buffer, "./out/rest/Qnp1%05d_bc.bin", 0);
     //writeBinary3DArray(buffer, m_nx+2*m_nhc-1, m_ny+2*m_nhc-1, 4, m_Qnp1);
@@ -412,7 +420,7 @@ void Solution::integrateFixedTime(const Parameters& par, const Grid& grid)
 
     // Update boundary conditions:
     conservativeToPrimitive  (par, m_nx, m_ny, m_nhc, V, m_Qnp1, m_Qvnp1);
-    computeBoundaryConditions(par, grid, m_nx, m_ny, m_nhc, m_Qvnp1);
+    computeBoundaryConditions(par, grid, m_nx, m_ny, m_nhc, m_Qvn, m_Qvnp1);
     primitiveToConservative  (par, m_nx, m_ny, m_nhc, V, m_Qnp1, m_Qvnp1);
     //sprintf(buffer, "./out/rest/Qnp1%05d_bc.bin", 0);
     //writeBinary3DArray(buffer, m_nx+2*m_nhc-1, m_ny+2*m_nhc-1, 4, m_Qnp1);
@@ -430,27 +438,27 @@ void Solution::updateVectors()
     }
 }
 
-void Solution::computeErrorNorms(int it)
+void Solution::computeErrorNorms(const Parameters& par)
 {
-    computeL2(m_nx, m_ny, m_nhc, m_Qn, m_Qnp1, m_L2[it-1]);
-    computeLinfinity(m_nx, m_ny, m_nhc, m_Qn, m_Qnp1, m_Linfty[it-1]);
-}
+    computeL2(par, m_nx, m_ny, m_nhc, m_Qn, m_Qnp1, m_L2[m_i-1]);
+    computeLinfinity(par, m_nx, m_ny, m_nhc, m_Qn, m_Qnp1, m_Linfty[m_i-1]);
 
-void Solution::logErrorNorms(int it)
-{
+    // Find min/max of L2 and L_\infty
     double minL2, maxL2, minLinfty, maxLinfty;
-    minL2     = m_L2[it-1][0];
-    maxL2     = m_L2[it-1][0];
-    minLinfty = m_Linfty[it-1][0];
-    maxLinfty = m_Linfty[it-1][0];
+    minL2     = m_L2[m_i-1][0];
+    maxL2     = m_L2[m_i-1][0];
+    minLinfty = m_Linfty[m_i-1][0];
+    maxLinfty = m_Linfty[m_i-1][0];
     for (int l=1; l<4; l++) {
-        minL2     = fmin(minL2, m_L2[it-1][l]);
-        maxL2     = fmax(maxL2, m_L2[it-1][l]);
-        minLinfty = fmin(minLinfty, m_Linfty[it-1][l]);
-        maxLinfty = fmax(maxLinfty, m_Linfty[it-1][l]);
+        minL2     = fmin(minL2, m_L2[m_i-1][l]);
+        maxL2     = fmax(maxL2, m_L2[m_i-1][l]);
+        minLinfty = fmin(minLinfty, m_Linfty[m_i-1][l]);
+        maxLinfty = fmax(maxLinfty, m_Linfty[m_i-1][l]);
     }
-    std::cout << "L_2:     min = " << minL2 << "; max = " << maxL2 << std::endl;
-    std::cout << "L_infty: min = " << maxLinfty << "; max = " << maxLinfty << std::endl;
+    m_L2_min     = minL2;
+    m_L2_max     = maxL2;
+    m_Linfty_min = minLinfty;
+    m_Linfty_max = maxLinfty;
 }
 
 void Solution::writeErrorNorms()
@@ -461,3 +469,23 @@ void Solution::writeErrorNorms()
     sprintf(buffer, "./out/rest/Linfty.bin");
     writeBinary2DArray(buffer, s_nit-1, 4, m_Linfty);
 }
+
+void Solution::setIteration(int i)
+{
+    m_i = i;
+}
+
+void Solution::log()
+{
+    std::cout << "Iteration " << m_i << " :" << std::endl;
+    // Time stepping:
+    //std::cout << "CFL:     max = " << m_CFL_max << std::endl;
+    std::cout << "dt:      min = " << m_dt_min 
+              << "; max = " << m_dt_max << std::endl;
+    // Error norms;
+    std::cout << "L_2:     min = " << m_L2_min 
+              << "; max = " << m_L2_max << std::endl;
+    std::cout << "L_infty: min = " << m_Linfty_min 
+              << "; max = " << m_Linfty_max << std::endl;
+}
+

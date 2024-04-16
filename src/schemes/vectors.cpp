@@ -13,20 +13,22 @@
  *
  * Parameters:
  * -----------
- *  struct Parameters& par  : const reference to struct of parameters;
- *  class  Grid&       grid : const reference to struct of parameters;
- *  int                nx   : number of nodes in xi direction;
- *  int                ny   : number of nodes in eta direction;
- *  int                nhc  : number of halo cells;
- *  double***&         Qn   : reference to conservative variable vector at the
- *                            n-th time step;
- *  double***&         Qv   : reference to primitive  variable vector at the
- *                            n-th time step;
+ *  struct Parameters& par   : const reference to struct of parameters;
+ *  class  Grid&       grid  : const reference to struct of parameters;
+ *  int                nx    : number of nodes in xi direction;
+ *  int                ny    : number of nodes in eta direction;
+ *  int                nhc   : number of halo cells;
+ *  double***&         Qn    : reference to conservative variable vector at the
+ *                             n-th time step;
+ *  double***&         Qvn   : reference to primitive  variable vector at the
+ *                             n-th time step;
+ *  double***&         Qvnp1 : reference to primitive  variable vector at the
+ *                             n+1-th time step;
  */
 void initializeField(
     const Parameters& par, const Grid& grid,
     int nx, int ny, int nhc, 
-    double***& Qn, double***& Qvn
+    double***& Qn, double***& Qvn, double***& Qvnp1
 )
 {
     std::cout << "--Flow field initialization:" << std::endl;
@@ -40,14 +42,22 @@ void initializeField(
         }
     }
     std::cout << "----Inner cells computed." << std::endl;
-    computeBoundaryConditions(par, grid, nx, ny, nhc, Qvn);
+    // Copy to Qvnp1 to use the updated computeBCs;
+    for (int i=nhc; i<(nx+nhc-1); i++) {
+        for (int j=nhc; j<(ny+nhc-1); j++) {
+            for (int l=0; l<4; l++) {
+                Qvnp1[i][j][l] = Qvn[i][j][l];
+            }
+        }
+    }
+    computeBoundaryConditions(par, grid, nx, ny, nhc, Qvn, Qvnp1);
     std::cout << "----Boundary conditions computed." << std::endl;
     //std::string wfpath = "./out/rest/Qv00000_original.bin";
     //writeBinary3DArray(wfpath, nx+2*nhc-1, ny+2*nhc-1, 4, Qvn);
 
     double** V;
     V = grid.getCellVolumes();
-    primitiveToConservative(par, nx, ny, nhc, V, Qn, Qvn);
+    primitiveToConservative(par, nx, ny, nhc, V, Qn, Qvnp1);
     //std::cout << "----Conservative vector converted." << std::endl;
     //wfpath = "./out/rest/Q00000_original.bin";
     //writeBinary3DArray(wfpath, nx+2*nhc-1, ny+2*nhc-1, 4, Qn);
@@ -73,7 +83,7 @@ void initializeField(
 void computeBoundaryConditions(
     const Parameters &par, const Grid& grid,
     int nx, int ny, int nhc, 
-    double***& Qvn
+    double***& Qvn, double***& Qvnp1
 )
 {
     double ***su, ***sv;
@@ -90,28 +100,28 @@ void computeBoundaryConditions(
         case SLIP_ADIABATIC:
             for (int j=0; j<nhc; j++) {
                 for (int i=nhc; i<(nx+nhc-1); i++) {
-                    Qvn[i][(nhc-1)-j][0] = Qvn[i][nhc+j][0];
+                    Qvnp1[i][(nhc-1)-j][0] = Qvnp1[i][nhc+j][0];
                     svx = sv[i][nhc][0];
                     svy = sv[i][nhc][1];
                     svx2 = svx*svx;
                     svy2 = svy*svy;
-                    Qvn[i][(nhc-1)-j][1] = ((svy2-svx2)*Qvn[i][nhc+j][1] \
-                                            -2*svx*svy*Qvn[i][nhc+j][2]) \
+                    Qvnp1[i][(nhc-1)-j][1] = ((svy2-svx2)*Qvnp1[i][nhc+j][1] \
+                                            -2*svx*svy*Qvnp1[i][nhc+j][2]) \
                                             / (svx2 + svy2);
-                    Qvn[i][(nhc-1)-j][2] = (-2*svx*svy*Qvn[i][nhc+j][1]    \
-                                            +(svx2-svy2)*Qvn[i][nhc+j][2]) \
+                    Qvnp1[i][(nhc-1)-j][2] = (-2*svx*svy*Qvnp1[i][nhc+j][1]    \
+                                            +(svx2-svy2)*Qvnp1[i][nhc+j][2]) \
                                             / (svx2 + svy2);
-                    Qvn[i][(nhc-1)-j][3] = Qvn[i][nhc+j][3];
+                    Qvnp1[i][(nhc-1)-j][3] = Qvnp1[i][nhc+j][3];
                 }
             }
             break;
         case NOSLIP_ADIABATIC:
             for (int j=0; j<nhc; j++) {
                 for (int i=nhc; i<(nx+nhc-1); i++) {
-                    Qvn[i][(nhc-1)-j][0] =  Qvn[i][nhc+j][0];
-                    Qvn[i][(nhc-1)-j][1] = -Qvn[i][nhc+j][1];
-                    Qvn[i][(nhc-1)-j][2] = -Qvn[i][nhc+j][2];
-                    Qvn[i][(nhc-1)-j][3] =  Qvn[i][nhc+j][3];
+                    Qvnp1[i][(nhc-1)-j][0] =  Qvnp1[i][nhc+j][0];
+                    Qvnp1[i][(nhc-1)-j][1] = -Qvnp1[i][nhc+j][1];
+                    Qvnp1[i][(nhc-1)-j][2] = -Qvnp1[i][nhc+j][2];
+                    Qvnp1[i][(nhc-1)-j][3] =  Qvnp1[i][nhc+j][3];
                 }
             }
             break;
@@ -132,10 +142,10 @@ void computeBoundaryConditions(
         case OUTFLOW_SUPERSONIC:
             for (int i=0; i<nhc; i++) {
                 for (int j=nhc; j<(ny+nhc-1); j++) {
-                    Qvn[(nx+nhc-1)+i][j][0] = Qvn[(nx+nhc-2)-i][j][0];
-                    Qvn[(nx+nhc-1)+i][j][1] = Qvn[(nx+nhc-2)-i][j][1];
-                    Qvn[(nx+nhc-1)+i][j][2] = Qvn[(nx+nhc-2)-i][j][2];
-                    Qvn[(nx+nhc-1)+i][j][3] = Qvn[(nx+nhc-2)-i][j][3];
+                    Qvnp1[(nx+nhc-1)+i][j][0] = Qvn[(nx+nhc-2)-i][j][0];
+                    Qvnp1[(nx+nhc-1)+i][j][1] = Qvn[(nx+nhc-2)-i][j][1];
+                    Qvnp1[(nx+nhc-1)+i][j][2] = Qvn[(nx+nhc-2)-i][j][2];
+                    Qvnp1[(nx+nhc-1)+i][j][3] = Qvn[(nx+nhc-2)-i][j][3];
                 }
             }
             break;
@@ -194,28 +204,28 @@ void computeBoundaryConditions(
         case SLIP_ADIABATIC:
             for (int j=0; j<nhc; j++) {
                 for (int i=nhc; i<(nx+nhc-1); i++) {
-                    Qvn[i][(ny+nhc-1)+j][0] = Qvn[i][(ny+nhc-2)-j][0];
+                    Qvnp1[i][(ny+nhc-1)+j][0] = Qvnp1[i][(ny+nhc-2)-j][0];
                     svx = sv[i][ny+nhc][0];
                     svy = sv[i][ny+nhc][1];
                     svx2 = svx*svx;
                     svy2 = svy*svy;
-                    Qvn[i][(ny+nhc-1)+j][1] = ((svy2-svx2)*Qvn[i][(ny+nhc-2)-j][1] \
-                                            -2*svx*svy*Qvn[i][(ny+nhc-2)-j][2]) \
+                    Qvnp1[i][(ny+nhc-1)+j][1] = ((svy2-svx2)*Qvnp1[i][(ny+nhc-2)-j][1] \
+                                            -2*svx*svy*Qvnp1[i][(ny+nhc-2)-j][2]) \
                                             / (svx2 + svy2);
-                    Qvn[i][(ny+nhc-1)+j][2] = (-2*svx*svy*Qvn[i][(ny+nhc-2)-j][1]    \
-                                            +(svx2-svy2)*Qvn[i][(ny+nhc-2)-j][2]) \
+                    Qvnp1[i][(ny+nhc-1)+j][2] = (-2*svx*svy*Qvnp1[i][(ny+nhc-2)-j][1]    \
+                                            +(svx2-svy2)*Qvnp1[i][(ny+nhc-2)-j][2]) \
                                             / (svx2 + svy2);
-                    Qvn[i][(ny+nhc-1)+j][3] = Qvn[i][(ny+nhc-2)-j][3];
+                    Qvnp1[i][(ny+nhc-1)+j][3] = Qvnp1[i][(ny+nhc-2)-j][3];
                 }
             }
             break;
         case NOSLIP_ADIABATIC:
             for (int j=0; j<nhc; j++) {
                 for (int i=nhc; i<(nx+nhc-1); i++) {
-                    Qvn[i][(ny+nhc)+j][0] =  Qvn[i][(ny+nhc-1)-j][0];
-                    Qvn[i][(ny+nhc)+j][1] = -Qvn[i][(ny+nhc-1)-j][1];
-                    Qvn[i][(ny+nhc)+j][2] = -Qvn[i][(ny+nhc-1)-j][2];
-                    Qvn[i][(ny+nhc)+j][3] =  Qvn[i][(ny+nhc-1)-j][3];
+                    Qvnp1[i][(ny+nhc)+j][0] =  Qvnp1[i][(ny+nhc-1)-j][0];
+                    Qvnp1[i][(ny+nhc)+j][1] = -Qvnp1[i][(ny+nhc-1)-j][1];
+                    Qvnp1[i][(ny+nhc)+j][2] = -Qvnp1[i][(ny+nhc-1)-j][2];
+                    Qvnp1[i][(ny+nhc)+j][3] =  Qvnp1[i][(ny+nhc-1)-j][3];
                 }
             }
             break;
@@ -234,10 +244,10 @@ void computeBoundaryConditions(
         case INFLOW_SUPERSONIC:
             for (int i=0; i<nhc; i++) {
                 for (int j=nhc; j<(ny+nhc-1); j++) {
-                    Qvn[(nhc-1)-i][j][0] = par.ref.pref;
-                    Qvn[(nhc-1)-i][j][1] = par.ref.uref;
-                    Qvn[(nhc-1)-i][j][2] = 0.0;
-                    Qvn[(nhc-1)-i][j][3] = par.ref.Tref;
+                    Qvnp1[(nhc-1)-i][j][0] = par.ref.pref;
+                    Qvnp1[(nhc-1)-i][j][1] = par.ref.uref;
+                    Qvnp1[(nhc-1)-i][j][2] = 0.0;
+                    Qvnp1[(nhc-1)-i][j][3] = par.ref.Tref;
                 }
             }
             break;

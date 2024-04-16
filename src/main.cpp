@@ -16,7 +16,7 @@ int main(int argc, char* argv[0])
         //.rt    = {.nrest = 1,     .nit     = 11, .CFL   = 0.01,},
         //.rt    = {.nrest = 10,     .nit     = 101, .CFL   = 0.01, .dt = 1.0e-7},
         //.rt    = {.nrest = 100,     .nit     = 1001, .CFL   = 1.0, .dt = 1.0e-7},
-        .rt    = {.nrest = 1000,     .nit     = 10001, .CFL   = 0.6, .dt = 4.0e-5},
+        .rt    = {.nrest = 1000,     .nit     = 10001, .CFL   = 0.61, .dt = 4.0e-5},
         //.rt    = {.nrest = 10000,     .nit     = 100001, .CFL   = 0.000001, .dt = 1.0e-6},
         .ref   = {.pref  = 101325.0, .uref    = 694.4, .Tref  = 300.0, 
                   .lref  = 1.0,},
@@ -36,7 +36,7 @@ int main(int argc, char* argv[0])
 
     // Temporal loop:
     for (int i=1; i<sim_par.rt.nit; i++) {
-        std::cout << "Iteration " << i << " :" << std::endl;
+        solution.setIteration(i);
         // Flux construction at cell faces;
         solution.constructLeftRightStates(
             sim_par.muscl.kappa, sim_par.muscl.epsilon
@@ -50,8 +50,10 @@ int main(int argc, char* argv[0])
         solution.integrateLocalTime(sim_par, grid);
         //solution.integrateFixedTime(sim_par, grid);
         // Compute error metrics:
-        solution.computeErrorNorms(i);
-        solution.logErrorNorms(i);
+        solution.computeErrorNorms(sim_par);
+        if (i % 50 == 0) {
+            solution.log();
+        }
         // Update values and write if specified.
         solution.updateVectors();
         if (i % sim_par.rt.nrest == 0) {
