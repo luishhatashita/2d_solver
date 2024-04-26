@@ -214,6 +214,581 @@ void Solution::computeFluxes(const Parameters& par, const Grid& grid)
     //);
 }
 
+/* Construct MUSCL interpolants, obtain left and right states, and construct 
+ * fluxes at xi faces.
+ *
+ * Parameters:
+ * -----------
+ *  struct Parameters& par  : reference to simulation parameters;
+ *  class  Grid&       grid : reference to grid with finite volume metrics;
+ */
+void Solution::computeXiFirstOrderFluxes(const Parameters& par, const Grid& grid)
+{
+    // Metrics
+    double ***Su;
+    Su = grid.getProjectedFaceAreasXi();
+
+    // MUSCL parameters;
+    double epsilon, kappa;
+    epsilon = par.muscl.epsilon;
+    kappa   = par.muscl.kappa;
+    
+    // a) high order for inner faces:
+    double r_L, r_R;
+    double QL[4], QR[4], Qu[4], Eh[4];
+    double u, v, u_xi, S_xi, p;
+    double delta = 1.0e-8;
+    for (int i=m_nhc+1; i<(m_nx+m_nhc-1)  ; i++) {
+        for (int j=m_nhc; j<(m_ny+m_nhc-1); j++) {
+            // Construct left and right states and interpolate at the face:
+            for (int l=0; l<4; l++) {
+                r_L = (m_Qn[i][j][l]  -m_Qn[i-1][j][l]+delta) \
+                     /(m_Qn[i-1][j][l]-m_Qn[i-2][j][l]+delta);
+                QL[l] = m_Qn[i-1][j][l] \
+                    + 0.25*epsilon*(
+                        (1.0-kappa)*(m_Qn[i-1][j][l]-m_Qn[i-2][j][l])*fluxLimiter(r_L)
+                       +(1.0+kappa)*(m_Qn[i][j][l]  -m_Qn[i-1][j][l])*fluxLimiter(1.0/r_L));
+                r_R = (m_Qn[i][j][l]  -m_Qn[i-1][j][l]+delta) \
+                     /(m_Qn[i+1][j][l]-m_Qn[i][j][l]  +delta);
+                QR[l] = m_Qn[i][j][l] \
+                    - 0.25*epsilon*(
+                        (1.0+kappa)*(m_Qn[i][j][l]  -m_Qn[i-1][j][l])*fluxLimiter(1.0/r_R)
+                       +(1.0-kappa)*(m_Qn[i+1][j][l]-m_Qn[i][j][l]  )*fluxLimiter(r_R));
+                // a) manually upwinding the fluxes;
+                Qu[l] = QL[l];
+            }
+            // Flux construction:
+            //u    = Qu[1]/Qu[0];
+            //v    = Qu[2]/Qu[0];
+            //S_xi = sqrt(Su[i][j][0]*Su[i][j][0] + Su[i][j][1]*Su[i][j][1]);
+            //u_xi = u*Su[i][j][0]/S_xi + v*Su[i][j][1]/S_xi;
+            //p    = (Qu[3] - 0.5*(Qu[1]*u + Qu[2]*v))*(par.td.gamma-1.0);
+            //m_Ehn[i][j][0] = Qu[0]*u_xi;
+            //m_Ehn[i][j][1] = Qu[1]*u_xi + p*Su[i][j][0]/S_xi;
+            //m_Ehn[i][j][2] = Qu[2]*u_xi + p*Su[i][j][1]/S_xi;
+            //m_Ehn[i][j][3] = (Qu[3]+p)*u_xi;
+            computeXiFlux(par, Su[i][j], Qu, Eh);
+            for (int l=0; l<4; l++) {
+                m_Ehn[i][j][l] = Eh[l];
+            }
+        }
+    }
+
+    // b) first order for boundaries:
+    // i. West boundary:
+    int i = m_nhc;
+    for (int j=m_nhc; j<(m_ny+m_nhc-1); j++) {
+        for (int l=0; l<4; l++) {
+            // Left and right states are the same to enforce BC;
+            //QL[l] = 0.5*(m_Qn[i-1][j][l]+m_Qn[i][j][l]);
+            //QR[l] = 0.5*(m_Qn[i-1][j][l]+m_Qn[i][j][l]);
+            QL[l] = m_Qn[i-1][j][l];
+            QR[l] = m_Qn[i][j][l];
+            // a) manually upwinding the fluxes;
+            Qu[l] = QL[l];
+        }
+        // Flux construction:
+        //u    = Qu[1]/Qu[0];
+        //v    = Qu[2]/Qu[0];
+        //S_xi = sqrt(Su[i][j][0]*Su[i][j][0] + Su[i][j][1]*Su[i][j][1]);
+        //u_xi = u*Su[i][j][0]/S_xi + v*Su[i][j][1]/S_xi;
+        //p    = (Qu[3] - 0.5*(Qu[1]*u + Qu[2]*v))*(par.td.gamma-1.0);
+        //m_Ehn[i][j][0] = Qu[0]*u_xi;
+        //m_Ehn[i][j][1] = Qu[1]*u_xi + p*Su[i][j][0]/S_xi;
+        //m_Ehn[i][j][2] = Qu[2]*u_xi + p*Su[i][j][1]/S_xi;
+        //m_Ehn[i][j][3] = (Qu[3]+p)*u_xi;
+        computeXiFlux(par, Su[i][j], Qu, Eh);
+        for (int l=0; l<4; l++) {
+            m_Ehn[i][j][l] = Eh[l];
+        }
+    }
+    // ii. East boundary:
+    i = m_nx+m_nhc-1;
+    for (int j=m_nhc; j<(m_ny+m_nhc-1); j++) {
+        for (int l=0; l<4; l++) {
+            // Left and right states are the same to enforce BC;
+            //QL[l] = 0.5*(m_Qn[i-1][j][l]+m_Qn[i][j][l]);
+            //QR[l] = 0.5*(m_Qn[i-1][j][l]+m_Qn[i][j][l]);
+            QL[l] = m_Qn[i-1][j][l];
+            QR[l] = m_Qn[i][j][l];
+            // a) manually upwinding the fluxes;
+            Qu[l] = QL[l];
+        }
+        // Flux construction:
+        //u    = Qu[1]/Qu[0];
+        //v    = Qu[2]/Qu[0];
+        //S_xi = sqrt(Su[i][j][0]*Su[i][j][0] + Su[i][j][1]*Su[i][j][1]);
+        //u_xi = u*Su[i][j][0]/S_xi + v*Su[i][j][1]/S_xi;
+        //p    = (Qu[3] - 0.5*(Qu[1]*u + Qu[2]*v))*(par.td.gamma-1.0);
+        //m_Ehn[i][j][0] = Qu[0]*u_xi;
+        //m_Ehn[i][j][1] = Qu[1]*u_xi + p*Su[i][j][0]/S_xi;
+        //m_Ehn[i][j][2] = Qu[2]*u_xi + p*Su[i][j][1]/S_xi;
+        //m_Ehn[i][j][3] = (Qu[3]+p)*u_xi;
+        computeXiFlux(par, Su[i][j], Qu, Eh);
+        for (int l=0; l<4; l++) {
+            m_Ehn[i][j][l] = Eh[l];
+        }
+    }
+}
+
+/* Construct MUSCL interpolants, obtain left and right states, and construct 
+ * Roe scheme fluxes at xi faces.
+ *
+ * Parameters:
+ * -----------
+ *  struct Parameters& par  : reference to simulation parameters;
+ *  class  Grid&       grid : reference to grid with finite volume metrics;
+ */
+void Solution::computeXiRoeFluxes(const Parameters& par, const Grid& grid)
+{
+    // Metrics
+    double ***Su;
+    Su = grid.getProjectedFaceAreasXi();
+
+    // MUSCL parameters;
+    double epsilon, kappa;
+    epsilon = par.muscl.epsilon;
+    kappa   = par.muscl.kappa;
+    
+    // a) high order for inner faces:
+    double r_L, r_R;
+    double QL[4], QR[4], Qu[4], EhL[4], EhR[4], AdQu[4];
+    #pragma omp parallel for private(QL, QR, EhL, EhR, AdQu)
+    for (int i=m_nhc+1; i<(m_nx+m_nhc-1)  ; i++) {
+        for (int j=m_nhc; j<(m_ny+m_nhc-1); j++) {
+            // Construct left and right states and interpolate at the face:
+            for (int l=0; l<4; l++) {
+                r_L = (m_Qn[i][j][l]-m_Qn[i-1][j][l])/(m_Qn[i-1][j][l]-m_Qn[i-2][j][l]);
+                QL[l] = m_Qn[i-1][j][l] \
+                    + 0.25*epsilon*(
+                        (1.0-kappa)*(m_Qn[i-1][j][l]-m_Qn[i-2][j][l])*fluxLimiter(r_L)
+                       +(1.0+kappa)*(m_Qn[i][j][l]  -m_Qn[i-1][j][l])*fluxLimiter(1.0/r_L));
+                r_R = (m_Qn[i][j][l]-m_Qn[i-1][j][l])/(m_Qn[i+1][j][l]-m_Qn[i][j][l]);
+                QR[l] = m_Qn[i][j][l] \
+                    - 0.25*epsilon*(
+                        (1.0+kappa)*(m_Qn[i][j][l]  -m_Qn[i-1][j][l])*fluxLimiter(1.0/r_R)
+                       +(1.0-kappa)*(m_Qn[i+1][j][l]-m_Qn[i][j][l]  )*fluxLimiter(r_R));
+            }
+            // Flux construction:
+            computeXiFlux(par, Su[i][j], QL, EhL);
+            computeXiFlux(par, Su[i][j], QR, EhR);
+            computeXiDissipation(par, Su[i][j], QL, QR, AdQu);
+            for (int l=0; l<4; l++) {
+                m_Ehn[i][j][l] = 0.5*(EhR[l] + EhL[l]) - 0.5*AdQu[l]; 
+            }
+        }
+    }
+
+    // b) first order for boundaries:
+    // i. West boundary:
+    int i = m_nhc;
+    for (int j=m_nhc; j<(m_ny+m_nhc-1); j++) {
+        for (int l=0; l<4; l++) {
+            // Left and right states are the same to enforce BC;
+            QL[l] = 0.5*(m_Qn[i-1][j][l]+m_Qn[i][j][l]);
+            QR[l] = 0.5*(m_Qn[i-1][j][l]+m_Qn[i][j][l]);
+            //Qu[l] = QL[l];
+            //Qu[l] = 0.5*(QL[l]*QR[l]);
+        }
+        // Flux construction:
+        computeXiFlux(par, Su[i][j], QL, EhL);
+        for (int l=0; l<4; l++) {
+            m_Ehn[i][j][l] = EhL[l]; 
+        }
+    }
+    // ii. East boundary:
+    i = m_nx+m_nhc-1;
+    for (int j=m_nhc; j<(m_ny+m_nhc-1); j++) {
+        for (int l=0; l<4; l++) {
+            // Left and right states are the same to enforce BC;
+            QL[l] = 0.5*(m_Qn[i-1][j][l]+m_Qn[i][j][l]);
+            QR[l] = 0.5*(m_Qn[i-1][j][l]+m_Qn[i][j][l]);
+        }
+        // Flux construction:
+        computeXiFlux(par, Su[i][j], QL, EhL);
+        for (int l=0; l<4; l++) {
+            m_Ehn[i][j][l] = EhL[l]; 
+        }
+    }
+}
+
+/* Construct MUSCL interpolants, obtain left and right states, and construct 
+ * AUSM scheme fluxes at xi faces.
+ *
+ * Parameters:
+ * -----------
+ *  struct Parameters& par  : reference to simulation parameters;
+ *  class  Grid&       grid : reference to grid with finite volume metrics;
+ */
+void Solution::computeXiAUSMFluxes(const Parameters& par, const Grid& grid)
+{
+    // Metrics
+    double ***Su;
+    Su = grid.getProjectedFaceAreasXi();
+
+    // MUSCL parameters;
+    double epsilon, kappa;
+    epsilon = par.muscl.epsilon;
+    kappa   = par.muscl.kappa;
+    
+    // a) high order for inner faces:
+    double r_L, r_R;
+    double QL[4], QR[4], Qu[4], Eh[4];
+    double delta = 1.0e-8;
+    #pragma omp parallel for private(QL, QR, Eh)
+    for (int i=m_nhc+1; i<(m_nx+m_nhc-1)  ; i++) {
+        for (int j=m_nhc; j<(m_ny+m_nhc-1); j++) {
+            // Construct left and right states and interpolate at the face:
+            for (int l=0; l<4; l++) {
+                r_L = (m_Qn[i][j][l]  -m_Qn[i-1][j][l]+delta)
+                     /(m_Qn[i-1][j][l]-m_Qn[i-2][j][l]+delta);
+                QL[l] = m_Qn[i-1][j][l] \
+                    + 0.25*epsilon*(
+                        (1.0-kappa)*(m_Qn[i-1][j][l]-m_Qn[i-2][j][l])*fluxLimiter(r_L)
+                       +(1.0+kappa)*(m_Qn[i][j][l]  -m_Qn[i-1][j][l])*fluxLimiter(1.0/r_L));
+                r_R = (m_Qn[i][j][l]  -m_Qn[i-1][j][l]+delta)
+                     /(m_Qn[i+1][j][l]-m_Qn[i][j][l]  +delta);
+                QR[l] = m_Qn[i][j][l] \
+                    - 0.25*epsilon*(
+                        (1.0+kappa)*(m_Qn[i][j][l]  -m_Qn[i-1][j][l])*fluxLimiter(1.0/r_R)
+                       +(1.0-kappa)*(m_Qn[i+1][j][l]-m_Qn[i][j][l]  )*fluxLimiter(r_R));
+            }
+            // Flux construction:
+            computeXiAUSMFlux(par, Su[i][j], QL, QR, Eh);
+            for (int l=0; l<4; l++) {
+                m_Ehn[i][j][l] = Eh[l];
+            }
+        }
+    }
+
+    // b) first order for boundaries:
+    // i. West boundary:
+    int i = m_nhc;
+    for (int j=m_nhc; j<(m_ny+m_nhc-1); j++) {
+        for (int l=0; l<4; l++) {
+            // Left and right states are the same to enforce BC;
+            //QL[l] = 0.5*(m_Qn[i-1][j][l]+m_Qn[i][j][l]);
+            //QR[l] = 0.5*(m_Qn[i-1][j][l]+m_Qn[i][j][l]);
+            QL[l] = m_Qn[i-1][j][l];
+            QR[l] = m_Qn[i][j][l];
+            //Qu[l] = QL[l];
+            Qu[l] = 0.5*(QL[l]+QR[l]);
+        }
+        // Flux construction:
+        //computeXiFlux(par, Su[i][j], Qu, Eh);
+        computeXiAUSMFlux(par, Su[i][j], QL, QR, Eh);
+        for (int l=0; l<4; l++) {
+            m_Ehn[i][j][l] = Eh[l]; 
+        }
+    }
+    // ii. East boundary:
+    i = m_nx+m_nhc-1;
+    for (int j=m_nhc; j<(m_ny+m_nhc-1); j++) {
+        for (int l=0; l<4; l++) {
+            // Left and right states are the same to enforce BC;
+            //QL[l] = 0.5*(m_Qn[i-1][j][l]+m_Qn[i][j][l]);
+            //QR[l] = 0.5*(m_Qn[i-1][j][l]+m_Qn[i][j][l]);
+            QL[l] = m_Qn[i-1][j][l];
+            QR[l] = m_Qn[i][j][l];
+            //Qu[l] = QL[l];
+            Qu[l] = 0.5*(QL[l]+QR[l]);
+        }
+        // Flux construction:
+        //computeXiFlux(par, Su[i][j], Qu, Eh);
+        computeXiAUSMFlux(par, Su[i][j], QL, QR, Eh);
+        for (int l=0; l<4; l++) {
+            m_Ehn[i][j][l] = Eh[l]; 
+        }
+    }
+}
+
+/* Construct MUSCL interpolants, obtain left and right states, and construct 
+ * fluxes at eta faces.
+ *
+ * Parameters:
+ * -----------
+ *  struct Parameters& par  : reference to simulation parameters;
+ *  class  Grid&       grid : reference to grid with finite volume metrics;
+ */
+void Solution::computeEtaFirstOrderFluxes(const Parameters& par, const Grid& grid)
+{
+    // Metrics
+    double ***Sv;
+    Sv = grid.getProjectedFaceAreasEta();
+
+    // MUSCL parameters;
+    double epsilon, kappa;
+    epsilon = par.muscl.epsilon;
+    kappa   = par.muscl.kappa;
+    
+    // a) high order stencils at the inner faces
+    double r_L, r_R;
+    double QL[4], QR[4], Qv[4], Fh[4];
+    double u, v, v_et, S_et, p;
+    double delta = 1.0e-8;
+    for (int i=m_nhc; i<(m_nx+m_nhc-1); i++) {
+        for (int j=m_nhc+1; j<(m_ny+m_nhc-1)  ; j++) {
+            for (int l=0; l<4; l++) {
+                r_L = (m_Qn[i][j][l]  -m_Qn[i][j-1][l]+delta) \
+                     /(m_Qn[i][j-1][l]-m_Qn[i][j-2][l]+delta);
+                QL[l] = m_Qn[i][j-1][l] \
+                    + 0.25*epsilon*(
+                        (1.0-kappa)*(m_Qn[i][j-1][l]-m_Qn[i][j-2][l])*fluxLimiter(r_L)
+                       +(1.0+kappa)*(m_Qn[i][j][l]  -m_Qn[i][j-1][l])*fluxLimiter(1.0/r_L));
+                r_R = (m_Qn[i][j][l]  -m_Qn[i][j-1][l]+delta) \
+                     /(m_Qn[i][j+1][l]-m_Qn[i][j][l]  +delta);
+                QR[l] = m_Qn[i][j][l] \
+                    - 0.25*epsilon*(
+                        (1.0+kappa)*(m_Qn[i][j][l]  -m_Qn[i][j-1][l])*fluxLimiter(1.0/r_R)
+                       +(1.0-kappa)*(m_Qn[i][j+1][l]-m_Qn[i][j][l]  )*fluxLimiter(r_R));
+                //Qv[l] = QR[l];
+                //Qv[l] = QL[l];
+                Qv[l] = 0.5*(QL[l] + QR[l]);
+            }
+            // Flux construction
+            //u    = Qv[1]/Qv[0];
+            //v    = Qv[2]/Qv[0];
+            //S_et = sqrt(Sv[i][j][0]*Sv[i][j][0] + Sv[i][j][1]*Sv[i][j][1]);
+            //v_et = u*Sv[i][j][0]/S_et + v*Sv[i][j][1]/S_et;
+            //p    = (Qv[3] - 0.5*(Qv[1]*u + Qv[2]*v))*(par.td.gamma-1.0);
+            //m_Fhn[i][j][0] = Qv[0]*v_et;
+            //m_Fhn[i][j][1] = Qv[1]*v_et + p*Sv[i][j][0]/S_et;
+            //m_Fhn[i][j][2] = Qv[2]*v_et + p*Sv[i][j][1]/S_et;
+            //m_Fhn[i][j][3] = (Qv[3]+p)*v_et;
+            computeEtaFlux(par, Sv[i][j], Qv, Fh);
+            for (int l=0; l<4; l++) {
+                m_Fhn[i][j][l] = Fh[l];
+            }
+        }
+    }
+    // b) first order for boundaries:
+    // i. South boundary:
+    int j = m_nhc;
+    for (int i=m_nhc; i<(m_nx+m_nhc-1); i++) {
+        for (int l=0; l<4; l++) {
+            //// South boundary:
+            //QvL[i][m_nhc][l]      = m_Qn[i][m_nhc-1][l];
+            //QvR[i][m_nhc][l]      = m_Qn[i][m_nhc][l];
+            // South boundary:
+            QL[l] = m_Qn[i][j-1][l];
+            QR[l] = m_Qn[i][j][l];
+            Qv[l] = 0.5*(QL[l] + QR[l]);
+        }
+        // Flux construction:
+        //u    = Qv[1]/Qv[0];
+        //v    = Qv[2]/Qv[0];
+        //S_et = sqrt(Sv[i][j][0]*Sv[i][j][0] + Sv[i][j][1]*Sv[i][j][1]);
+        //v_et = u*Sv[i][j][0]/S_et + v*Sv[i][j][1]/S_et;
+        //p    = (Qv[3] - 0.5*(Qv[1]*u + Qv[2]*v))*(par.td.gamma-1.0);
+        //m_Fhn[i][j][0] = Qv[0]*v_et;
+        //m_Fhn[i][j][1] = Qv[1]*v_et + p*Sv[i][j][0]/S_et;
+        //m_Fhn[i][j][2] = Qv[2]*v_et + p*Sv[i][j][1]/S_et;
+        //m_Fhn[i][j][3] = (Qv[3]+p)*v_et;
+        computeEtaFlux(par, Sv[i][j], Qv, Fh);
+        for (int l=0; l<4; l++) {
+            m_Fhn[i][j][l] = Fh[l];
+        }
+    }
+    // ii. North boundary:
+    j = m_ny+m_nhc-1;
+    for (int i=m_nhc; i<(m_nx+m_nhc-1); i++) {
+        for (int l=0; l<4; l++) {
+            //// North boundary:
+            //QvL[i][m_ny+m_nhc-1][l] = m_Qn[i][m_ny+m_nhc-2][l];
+            //QvR[i][m_ny+m_nhc-1][l] = m_Qn[i][m_ny+m_nhc-1][l];
+            // North boundary:
+            QL[l] = m_Qn[i][j-1][l];
+            QR[l] = m_Qn[i][j][l];
+            Qv[l] = 0.5*(QL[l] + QR[l]);
+        }
+        // Flux construction:
+        //u    = Qv[1]/Qv[0];
+        //v    = Qv[2]/Qv[0];
+        //S_et = sqrt(Sv[i][j][0]*Sv[i][j][0] + Sv[i][j][1]*Sv[i][j][1]);
+        //v_et = u*Sv[i][j][0]/S_et + v*Sv[i][j][1]/S_et;
+        //p    = (Qv[3] - 0.5*(Qv[1]*u + Qv[2]*v))*(par.td.gamma-1.0);
+        //m_Fhn[i][j][0] = Qv[0]*v_et;
+        //m_Fhn[i][j][1] = Qv[1]*v_et + p*Sv[i][j][0]/S_et;
+        //m_Fhn[i][j][2] = Qv[2]*v_et + p*Sv[i][j][1]/S_et;
+        //m_Fhn[i][j][3] = (Qv[3]+p)*v_et;
+        computeEtaFlux(par, Sv[i][j], Qv, Fh);
+        for (int l=0; l<4; l++) {
+            m_Fhn[i][j][l] = Fh[l];
+        }
+    }
+}
+
+/* Construct MUSCL interpolants, obtain left and right states, and construct 
+ * Roe scheme fluxes at eta faces.
+ *
+ * Parameters:
+ * -----------
+ *  struct Parameters& par  : reference to simulation parameters;
+ *  class  Grid&       grid : reference to grid with finite volume metrics;
+ */
+void Solution::computeEtaRoeFluxes(const Parameters& par, const Grid& grid)
+{
+    // Metrics
+    double ***Sv;
+    Sv = grid.getProjectedFaceAreasEta();
+
+    // MUSCL parameters;
+    double epsilon, kappa;
+    epsilon = par.muscl.epsilon;
+    kappa   = par.muscl.kappa;
+    
+    // a) high order stencils at the inner faces
+    double r_L, r_R;
+    double QL[4], QR[4], FhL[4], FhR[4], BdQv[4];
+    #pragma omp parallel for private(QL, QR, FhL, FhR, BdQv)
+    for (int i=m_nhc; i<(m_nx+m_nhc-1); i++) {
+        for (int j=m_nhc+1; j<(m_ny+m_nhc-1)  ; j++) {
+            for (int l=0; l<4; l++) {
+                r_L = (m_Qn[i][j][l]-m_Qn[i][j-1][l])/(m_Qn[i][j-1][l]-m_Qn[i][j-2][l]);
+                QL[l] = m_Qn[i][j-1][l] \
+                    + 0.25*epsilon*(
+                        (1.0-kappa)*(m_Qn[i][j-1][l]-m_Qn[i][j-2][l])*fluxLimiter(r_L)
+                       +(1.0+kappa)*(m_Qn[i][j][l]  -m_Qn[i][j-1][l])*fluxLimiter(1.0/r_L));
+                r_R = (m_Qn[i][j][l]-m_Qn[i][j-1][l])/(m_Qn[i][j+1][l]-m_Qn[i][j][l]);
+                QR[l] = m_Qn[i][j][l] \
+                    - 0.25*epsilon*(
+                        (1.0+kappa)*(m_Qn[i][j][l]  -m_Qn[i][j-1][l])*fluxLimiter(1.0/r_R)
+                       +(1.0-kappa)*(m_Qn[i][j+1][l]-m_Qn[i][j][l]  )*fluxLimiter(r_R));
+            }
+            // Flux construction:
+            computeEtaFlux(par, Sv[i][j], QL, FhL);
+            computeEtaFlux(par, Sv[i][j], QR, FhR);
+            computeEtaDissipation(par, Sv[i][j], QL, QR, BdQv);
+            for (int l=0; l<4; l++) {
+                m_Fhn[i][j][l] = 0.5*(FhR[l] + FhL[l]) - 0.5*BdQv[l]; 
+            }
+        }
+    }
+    // b) first order for boundaries:
+    // i. South boundary:
+    int j = m_nhc;
+    for (int i=m_nhc; i<(m_nx+m_nhc-1); i++) {
+        for (int l=0; l<4; l++) {
+            //// South boundary:
+            //QvL[i][m_nhc][l]      = m_Qn[i][m_nhc-1][l];
+            //QvR[i][m_nhc][l]      = m_Qn[i][m_nhc][l];
+            // South boundary:
+            QL[l] = 0.5*(m_Qn[i][j-1][l]+m_Qn[i][j][l]);
+            QR[l] = 0.5*(m_Qn[i][j-1][l]+m_Qn[i][j][l]);
+        }
+        computeEtaFlux(par, Sv[i][j], QL, FhL);
+        for (int l=0; l<4; l++) {
+            m_Fhn[i][j][l] = FhL[l];
+        }
+    }
+    // ii. North boundary:
+    j = m_ny+m_nhc-1;
+    for (int i=m_nhc; i<(m_nx+m_nhc-1); i++) {
+        for (int l=0; l<4; l++) {
+            //// North boundary:
+            //QvL[i][m_ny+m_nhc-1][l] = m_Qn[i][m_ny+m_nhc-2][l];
+            //QvR[i][m_ny+m_nhc-1][l] = m_Qn[i][m_ny+m_nhc-1][l];
+            // North boundary:
+            QL[l] = 0.5*(m_Qn[i][j-1][l]+m_Qn[i][j][l]);
+            QR[l] = 0.5*(m_Qn[i][j-1][l]+m_Qn[i][j][l]);
+        }
+        computeEtaFlux(par, Sv[i][j], QL, FhL);
+        for (int l=0; l<4; l++) {
+            m_Fhn[i][j][l] = FhL[l];
+        }
+    }
+}
+
+/* Construct MUSCL interpolants, obtain left and right states, and construct 
+ * AUSM scheme fluxes at eta faces.
+ *
+ * Parameters:
+ * -----------
+ *  struct Parameters& par  : reference to simulation parameters;
+ *  class  Grid&       grid : reference to grid with finite volume metrics;
+ */
+void Solution::computeEtaAUSMFluxes(const Parameters& par, const Grid& grid)
+{
+    // Metrics
+    double ***Sv;
+    Sv = grid.getProjectedFaceAreasEta();
+
+    // MUSCL parameters;
+    double epsilon, kappa;
+    epsilon = par.muscl.epsilon;
+    kappa   = par.muscl.kappa;
+    
+    // a) high order stencils at the inner faces
+    double r_L, r_R;
+    double QL[4], QR[4], Qv[4], Fh[4];
+    double delta = 1.0e-8;
+    #pragma omp parallel for private(QL, QR, Fh)
+    for (int i=m_nhc; i<(m_nx+m_nhc-1); i++) {
+        for (int j=m_nhc+1; j<(m_ny+m_nhc-1)  ; j++) {
+            for (int l=0; l<4; l++) {
+                r_L = (m_Qn[i][j][l]  -m_Qn[i][j-1][l]+delta)
+                     /(m_Qn[i][j-1][l]-m_Qn[i][j-2][l]+delta);
+                QL[l] = m_Qn[i][j-1][l] \
+                    + 0.25*epsilon*(
+                        (1.0-kappa)*(m_Qn[i][j-1][l]-m_Qn[i][j-2][l])*fluxLimiter(r_L)
+                       +(1.0+kappa)*(m_Qn[i][j][l]  -m_Qn[i][j-1][l])*fluxLimiter(1.0/r_L));
+                r_R = (m_Qn[i][j][l]  -m_Qn[i][j-1][l]+delta)
+                     /(m_Qn[i][j+1][l]-m_Qn[i][j][l]  +delta);
+                QR[l] = m_Qn[i][j][l] \
+                    - 0.25*epsilon*(
+                        (1.0+kappa)*(m_Qn[i][j][l]  -m_Qn[i][j-1][l])*fluxLimiter(1.0/r_R)
+                       +(1.0-kappa)*(m_Qn[i][j+1][l]-m_Qn[i][j][l]  )*fluxLimiter(r_R));
+            }
+            // Flux construction:
+            computeEtaAUSMFlux(par, Sv[i][j], QL, QR, Fh);
+            for (int l=0; l<4; l++) {
+                m_Fhn[i][j][l] = Fh[l]; 
+            }
+        }
+    }
+    // b) first order for boundaries:
+    // i. South boundary:
+    int j = m_nhc;
+    for (int i=m_nhc; i<(m_nx+m_nhc-1); i++) {
+        for (int l=0; l<4; l++) {
+            //// South boundary:
+            //QvL[i][m_nhc][l]      = m_Qn[i][m_nhc-1][l];
+            //QvR[i][m_nhc][l]      = m_Qn[i][m_nhc][l];
+            // South boundary:
+            //QL[l] = 0.5*(m_Qn[i][j-1][l]+m_Qn[i][j][l]);
+            //QR[l] = 0.5*(m_Qn[i][j-1][l]+m_Qn[i][j][l]);
+            QL[l] = m_Qn[i][j-1][l];
+            QR[l] = m_Qn[i][j][l];
+            Qv[l] = 0.5*(QL[l] + QR[l]);
+        }
+        //computeEtaFlux(par, Sv[i][j], Qv, Fh);
+        computeEtaAUSMFlux(par, Sv[i][j], QL, QR, Fh);
+        for (int l=0; l<4; l++) {
+            m_Fhn[i][j][l] = Fh[l];
+        }
+    }
+    // ii. North boundary:
+    j = m_ny+m_nhc-1;
+    for (int i=m_nhc; i<(m_nx+m_nhc-1); i++) {
+        for (int l=0; l<4; l++) {
+            //// North boundary:
+            //QvL[i][m_ny+m_nhc-1][l] = m_Qn[i][m_ny+m_nhc-2][l];
+            //QvR[i][m_ny+m_nhc-1][l] = m_Qn[i][m_ny+m_nhc-1][l];
+            // North boundary:
+            //QL[l] = 0.5*(m_Qn[i][j-1][l]+m_Qn[i][j][l]);
+            //QR[l] = 0.5*(m_Qn[i][j-1][l]+m_Qn[i][j][l]);
+            QL[l] = m_Qn[i][j-1][l];
+            QR[l] = m_Qn[i][j][l];
+            Qv[l] = 0.5*(QL[l] + QR[l]);
+        }
+        //computeEtaFlux(par, Sv[i][j], Qv, Fh);
+        computeEtaAUSMFlux(par, Sv[i][j], QL, QR, Fh);
+        for (int l=0; l<4; l++) {
+            m_Fhn[i][j][l] = Fh[l];
+        }
+    }
+}
+
 /* Method to compute local time step based on maximum CFL.
  *
  * Parameters:
@@ -240,6 +815,7 @@ void Solution::computeTimeSteps(
            rho_xi, rho_et, c,
            min, max;
     double b_ep, epsilon = 1.0e1;
+    #pragma omp parallel for
     for (int i=m_nhc; i<(m_nx+m_nhc-1); i++) {
         for (int j=m_nhc; j<(m_ny+m_nhc-1); j++) {
             // Interpolate metrics at cell centers:
@@ -355,6 +931,7 @@ void Solution::integrateLocalTime(const Parameters& par, const Grid& grid)
     // Loop through interior cells:
     // left face in xi 
     double S_xi_L, S_xi_R, S_et_L, S_et_R;
+    #pragma omp parallel for
     for (int i=m_nhc; i<(m_nx+m_nhc-1); i++) {
         for (int j=m_nhc; j<(m_ny+m_nhc-1); j++) {
             S_xi_L = sqrt(Su[i][j][0]*Su[i][j][0]     + Su[i][j][1]*Su[i][j][1]);

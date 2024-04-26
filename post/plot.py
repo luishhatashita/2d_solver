@@ -18,10 +18,11 @@ matplotlib.rc('text' , **text )
 import matplotlib.pyplot as plt
 
 if __name__ == '__main__':
-    nx, ny, nhc = 33, 25, 1
-    #nx, ny, nhc = 65, 49, 1
-    nrest = 1000
-    its = [nrest*i for i in range(11)]
+    #nx, ny, nhc = 33, 25, 1
+    nx, ny, nhc = 65, 49, 1
+    nrest = 1000 
+    its = [nrest*i for i in range(3)]
+    #its = [nrest*i for i in range(11)]
 
     x   = np.fromfile(f"./grid/g{nx}x{ny}u.bin", dtype=np.double)
     x   = x.reshape((nx,ny,2))

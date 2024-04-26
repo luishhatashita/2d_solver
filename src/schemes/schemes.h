@@ -13,6 +13,7 @@ void interpolateMUSCL(
     double***& QuL, double***& QuR,
     double***& QvL, double***& QvR
 );
+double fluxLimiter(double r);
 
 // Shock capturing scheme
 void computeFirstOrderUpwindFluxes(

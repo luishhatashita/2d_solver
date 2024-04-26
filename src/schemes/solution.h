@@ -31,6 +31,12 @@ class Solution
         // Shock-capturing schemes
         void constructLeftRightStates(double kappa, double epsilon);
         void computeFluxes(const Parameters& par, const Grid& grid);
+        void computeXiFirstOrderFluxes(const Parameters& par, const Grid& grid);
+        void computeEtaFirstOrderFluxes(const Parameters& par, const Grid& grid);
+        void computeXiRoeFluxes(const Parameters& par, const Grid& grid);
+        void computeEtaRoeFluxes(const Parameters& par, const Grid& grid);
+        void computeXiAUSMFluxes(const Parameters& par, const Grid& grid);
+        void computeEtaAUSMFluxes(const Parameters& par, const Grid& grid);
         // Time integration
         void computeTimeSteps(const Parameters& par, const Grid& grid, double& dt_max);
         void checkTimeStep(const Parameters& par, const Grid& grid, double dt);

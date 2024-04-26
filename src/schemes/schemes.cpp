@@ -7,7 +7,7 @@
 #include "solution.h"
 #include "vectors.h"
 
-double fluxLimiter(double r);
+//double fluxLimiter(double r);
 
 /* Method to left and right states at cell faces based on MUSCL formulation.
  *
@@ -44,7 +44,7 @@ void interpolateMUSCL(
                         (1.0-kappa)*(Q[i-1][j][l]-Q[i-2][j][l])*fluxLimiter(r_L)
                        +(1.0+kappa)*(Q[i][j][l]  -Q[i-1][j][l])*fluxLimiter(1.0/r_L));
                 r_R = (Q[i][j][l]-Q[i-1][j][l])/(Q[i+1][j][l]-Q[i][j][l]);
-                QuR[i][j][l] = Q[i][j][l]; \
+                QuR[i][j][l] = Q[i][j][l] \
                     - 0.25*epsilon*(
                         (1.0+kappa)*(Q[i][j][l]  -Q[i-1][j][l])*fluxLimiter(1.0/r_R)
                        +(1.0-kappa)*(Q[i+1][j][l]-Q[i][j][l]  )*fluxLimiter(r_R));
@@ -110,11 +110,22 @@ void interpolateMUSCL(
 
 double fluxLimiter(double r)
 {
-    double max, min;
-    min = fmin(1.0, r);
-    max = fmax(0.0, min);
-    return max;
-    //return 0.0; 
+    double phi = 1.0;
+
+    // min mod
+    phi = fmax(0.0, fmin(1.0,r));
+    
+    // monotonized central
+    //phi = fmax(0.0, fmin(2.0*r, fmin(0.5*(1.0+r), 2.0)));
+
+    // van Leer
+    //phi = (r+fabs(r))/(1.0+fabs(r)); // wikipedia and website;
+    //phi = (r+fabs(r))/(1.0+r*r); // Roe annual review;
+    
+    // van Albada 1
+    //phi = (r*r + r)/(r*r + 1);
+    
+    return phi; 
 }
 
 /* Method to manually upwind the fluxes, given that the flow comes from the left
@@ -200,8 +211,8 @@ void computeFirstOrderUpwindFluxes(
     }
     //*/
     
-    computeXiFlux (par, nx, ny, nhc, Su, V, Qu, Eh);
-    computeEtaFlux(par, nx, ny, nhc, Sv, V, Qv, Fh);
+    computeXiFluxes (par, nx, ny, nhc, Su, V, Qu, Eh);
+    computeEtaFluxes(par, nx, ny, nhc, Sv, V, Qv, Fh);
 }
 
 void computeRoeFluxes(
@@ -216,14 +227,14 @@ void computeRoeFluxes(
 )
 {
     // Compute left and right state fluxes:
-    computeXiFlux (par, nx, ny, nhc, Su, V, QuL, EhL);
-    computeXiFlux (par, nx, ny, nhc, Su, V, QuR, EhR);
-    computeEtaFlux(par, nx, ny, nhc, Sv, V, QvL, FhL);
-    computeEtaFlux(par, nx, ny, nhc, Sv, V, QvR, FhR);
+    computeXiFluxes (par, nx, ny, nhc, Su, V, QuL, EhL);
+    computeXiFluxes (par, nx, ny, nhc, Su, V, QuR, EhR);
+    computeEtaFluxes(par, nx, ny, nhc, Sv, V, QvL, FhL);
+    computeEtaFluxes(par, nx, ny, nhc, Sv, V, QvR, FhR);
     
     // Compute dissipation:
-    computeXiDissipation(par, nx, ny, nhc, Su, V, QuL, QuR, Qu, AQu);
-    computeEtaDissipation(par, nx, ny, nhc, Sv, V, QvL, QvR, Qv, BQv);
+    computeXiDissipations(par, nx, ny, nhc, Su, V, QuL, QuR, Qu, AQu);
+    computeEtaDissipations(par, nx, ny, nhc, Sv, V, QvL, QvR, Qv, BQv);
 
     // Compute fluxes:
     for (int i=nhc; i<(nx+nhc); i++) {

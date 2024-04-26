@@ -2,12 +2,12 @@
 #define CFD_PARAMETERS_PARAMETERS_H_
 
 struct RunTime {
-    int nrest, nit;
+    int nrest, nit, nlog;
     double CFL, dt;
 };
 
 struct Refs {
-    double pref, uref, Tref, lref;
+    double pref, uref, Tref, lref, Mref;
 };
 
 struct BCs {
@@ -22,12 +22,17 @@ struct MUSCL {
     double kappa, epsilon;
 };
 
+struct AUSM {
+    double beta, kp, ku, sigma;
+};
+
 struct Parameters {
     RunTime rt; 
     Refs    ref;
     BCs     bcs;
     Thermo  td;
     MUSCL   muscl;
+    AUSM    ausm;
 };
 
 //void sampleFunction();
