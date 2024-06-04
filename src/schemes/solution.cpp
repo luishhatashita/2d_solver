@@ -432,26 +432,30 @@ void Solution::computeXiAUSMFluxes(const Parameters& par, const Grid& grid)
     kappa   = par.muscl.kappa;
     
     // a) high order for inner faces:
-    double r_L, r_R;
     double QL[4], QR[4], Qu[4], Eh[4];
-    double delta = 1.0e-8;
-    #pragma omp parallel for private(QL, QR, Eh)
+    double r_L, r_R;
+    double delta = 1.0e-15;
+    #pragma omp parallel for private(r_L, r_R, QL, QR, Eh)
     for (int i=m_nhc+1; i<(m_nx+m_nhc-1)  ; i++) {
         for (int j=m_nhc; j<(m_ny+m_nhc-1); j++) {
             // Construct left and right states and interpolate at the face:
+            r_L = (m_Qn[i  ][j][0]-m_Qn[i-1][j][0]+delta)
+                 /(m_Qn[i-1][j][0]-m_Qn[i-2][j][0]+delta);
+            r_R = (m_Qn[i  ][j][0]-m_Qn[i-1][j][0]+delta)
+                 /(m_Qn[i+1][j][0]-m_Qn[i  ][j][0]+delta);
             for (int l=0; l<4; l++) {
-                r_L = (m_Qn[i][j][l]  -m_Qn[i-1][j][l]+delta)
-                     /(m_Qn[i-1][j][l]-m_Qn[i-2][j][l]+delta);
+                //r_L = (m_Qn[i][j][l]  -m_Qn[i-1][j][l]+delta)
+                //     /(m_Qn[i-1][j][l]-m_Qn[i-2][j][l]+delta);
                 QL[l] = m_Qn[i-1][j][l] \
                     + 0.25*epsilon*(
                         (1.0-kappa)*(m_Qn[i-1][j][l]-m_Qn[i-2][j][l])*fluxLimiter(r_L)
-                       +(1.0+kappa)*(m_Qn[i][j][l]  -m_Qn[i-1][j][l])*fluxLimiter(1.0/r_L));
-                r_R = (m_Qn[i][j][l]  -m_Qn[i-1][j][l]+delta)
-                     /(m_Qn[i+1][j][l]-m_Qn[i][j][l]  +delta);
+                       +(1.0+kappa)*(m_Qn[i  ][j][l]-m_Qn[i-1][j][l])*fluxLimiter(1.0/r_L));
+                //r_R = (m_Qn[i][j][l]  -m_Qn[i-1][j][l]+delta)
+                //     /(m_Qn[i+1][j][l]-m_Qn[i][j][l]  +delta);
                 QR[l] = m_Qn[i][j][l] \
                     - 0.25*epsilon*(
-                        (1.0+kappa)*(m_Qn[i][j][l]  -m_Qn[i-1][j][l])*fluxLimiter(1.0/r_R)
-                       +(1.0-kappa)*(m_Qn[i+1][j][l]-m_Qn[i][j][l]  )*fluxLimiter(r_R));
+                        (1.0+kappa)*(m_Qn[i  ][j][l]-m_Qn[i-1][j][l])*fluxLimiter(1.0/r_R)
+                       +(1.0-kappa)*(m_Qn[i+1][j][l]-m_Qn[i  ][j][l])*fluxLimiter(r_R));
             }
             // Flux construction:
             computeXiAUSMFlux(par, Su[i][j], QL, QR, Eh);
@@ -719,25 +723,29 @@ void Solution::computeEtaAUSMFluxes(const Parameters& par, const Grid& grid)
     kappa   = par.muscl.kappa;
     
     // a) high order stencils at the inner faces
-    double r_L, r_R;
     double QL[4], QR[4], Qv[4], Fh[4];
-    double delta = 1.0e-8;
-    #pragma omp parallel for private(QL, QR, Fh)
+    double r_L, r_R;
+    double delta = 1.0e-15;
+    #pragma omp parallel for private(r_L, r_R, QL, QR, Fh)
     for (int i=m_nhc; i<(m_nx+m_nhc-1); i++) {
         for (int j=m_nhc+1; j<(m_ny+m_nhc-1)  ; j++) {
+            r_L = (m_Qn[i][j  ][0]-m_Qn[i][j-1][0]+delta)
+                 /(m_Qn[i][j-1][0]-m_Qn[i][j-2][0]+delta);
+            r_R = (m_Qn[i][j  ][0]-m_Qn[i][j-1][0]+delta)
+                 /(m_Qn[i][j+1][0]-m_Qn[i][j  ][0]+delta);
             for (int l=0; l<4; l++) {
-                r_L = (m_Qn[i][j][l]  -m_Qn[i][j-1][l]+delta)
-                     /(m_Qn[i][j-1][l]-m_Qn[i][j-2][l]+delta);
+                //r_L = (m_Qn[i][j][l]  -m_Qn[i][j-1][l]+delta)
+                //     /(m_Qn[i][j-1][l]-m_Qn[i][j-2][l]+delta);
                 QL[l] = m_Qn[i][j-1][l] \
                     + 0.25*epsilon*(
                         (1.0-kappa)*(m_Qn[i][j-1][l]-m_Qn[i][j-2][l])*fluxLimiter(r_L)
-                       +(1.0+kappa)*(m_Qn[i][j][l]  -m_Qn[i][j-1][l])*fluxLimiter(1.0/r_L));
-                r_R = (m_Qn[i][j][l]  -m_Qn[i][j-1][l]+delta)
-                     /(m_Qn[i][j+1][l]-m_Qn[i][j][l]  +delta);
+                       +(1.0+kappa)*(m_Qn[i][j  ][l]-m_Qn[i][j-1][l])*fluxLimiter(1.0/r_L));
+                //r_R = (m_Qn[i][j][l]  -m_Qn[i][j-1][l]+delta)
+                //     /(m_Qn[i][j+1][l]-m_Qn[i][j][l]  +delta);
                 QR[l] = m_Qn[i][j][l] \
                     - 0.25*epsilon*(
-                        (1.0+kappa)*(m_Qn[i][j][l]  -m_Qn[i][j-1][l])*fluxLimiter(1.0/r_R)
-                       +(1.0-kappa)*(m_Qn[i][j+1][l]-m_Qn[i][j][l]  )*fluxLimiter(r_R));
+                        (1.0+kappa)*(m_Qn[i][j  ][l]-m_Qn[i][j-1][l])*fluxLimiter(1.0/r_R)
+                       +(1.0-kappa)*(m_Qn[i][j+1][l]-m_Qn[i][j  ][l])*fluxLimiter(r_R));
             }
             // Flux construction:
             computeEtaAUSMFlux(par, Sv[i][j], QL, QR, Fh);

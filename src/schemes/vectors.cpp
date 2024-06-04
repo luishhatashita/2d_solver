@@ -669,7 +669,7 @@ void computeXiAUSMFlux(
     double kp    = par.ausm.kp;
     double ku    = par.ausm.ku;
     double sigma = par.ausm.sigma;
-    double epsilon = 1.0e-8;
+    double epsilon = 1.0e-15;
 
     // Metrics
     double S_xi_x, S_xi_y, S_xi;
@@ -988,7 +988,7 @@ void computeEtaAUSMFlux(
     double kp    = par.ausm.kp;
     double ku    = par.ausm.ku;
     double sigma = par.ausm.sigma;
-    double epsilon = 1.0e-8;
+    double epsilon = 1.0e-15;
 
     // Metrics
     double S_eta_x, S_eta_y, S_eta;
